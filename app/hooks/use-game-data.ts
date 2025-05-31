@@ -41,7 +41,7 @@ export function useGameData() {
       const isDeployed = await contract.isContractDeployed()
 
       if (!isDeployed) {
-        // Use mock data if contract is not deployed
+        // Use empty data if contract is not deployed
         setGameStats({
           totalHarvested: 0,
           activeFarms: 0,

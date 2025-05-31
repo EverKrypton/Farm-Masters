@@ -59,7 +59,7 @@ export default function GameStats({
             <Coins className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{farmTokens.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{farmTokens > 0 ? farmTokens.toFixed(2) : "N/A"}</div>
             <p className="text-xs text-muted-foreground">Your FARM balance</p>
           </CardContent>
         </Card>
@@ -70,7 +70,7 @@ export default function GameStats({
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{usdtBalance.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{usdtBalance > 0 ? usdtBalance.toFixed(2) : "N/A"}</div>
             <p className="text-xs text-muted-foreground">Available for farming</p>
           </CardContent>
         </Card>
@@ -81,7 +81,7 @@ export default function GameStats({
             <Sprout className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{gameStats.activeFarms}</div>
+            <div className="text-2xl font-bold">{gameStats.activeFarms > 0 ? gameStats.activeFarms : "N/A"}</div>
             <p className="text-xs text-muted-foreground">Currently growing</p>
           </CardContent>
         </Card>
@@ -92,7 +92,9 @@ export default function GameStats({
             <TrendingUp className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{gameStats.dailyEarnings.toFixed(2)}</div>
+            <div className="text-2xl font-bold">
+              {gameStats.dailyEarnings > 0 ? gameStats.dailyEarnings.toFixed(2) : "N/A"}
+            </div>
             <p className="text-xs text-muted-foreground">FARM tokens per day</p>
           </CardContent>
         </Card>
@@ -106,7 +108,9 @@ export default function GameStats({
             <TrendingUp className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${contractStats.currentFarmPrice.toFixed(4)}</div>
+            <div className="text-2xl font-bold">
+              ${contractStats.currentFarmPrice > 0 ? contractStats.currentFarmPrice.toFixed(4) : "N/A"}
+            </div>
             <p className="text-xs text-muted-foreground">Current FARM/USDT price</p>
           </CardContent>
         </Card>
@@ -117,7 +121,9 @@ export default function GameStats({
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{contractStats.totalUsdtInPools.toFixed(0)}</div>
+            <div className="text-2xl font-bold">
+              {contractStats.totalUsdtInPools > 0 ? contractStats.totalUsdtInPools.toFixed(0) : "N/A"}
+            </div>
             <p className="text-xs text-muted-foreground">Total liquidity</p>
           </CardContent>
         </Card>
@@ -128,7 +134,9 @@ export default function GameStats({
             <Coins className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(contractStats.totalFarmSupply / 1000000).toFixed(1)}M</div>
+            <div className="text-2xl font-bold">
+              {contractStats.totalFarmSupply > 0 ? (contractStats.totalFarmSupply / 1000000).toFixed(1) + "M" : "N/A"}
+            </div>
             <p className="text-xs text-muted-foreground">Total FARM tokens</p>
           </CardContent>
         </Card>
@@ -139,7 +147,9 @@ export default function GameStats({
             <Sprout className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{contractStats.dailyFarmDistribution.toFixed(0)}</div>
+            <div className="text-2xl font-bold">
+              {contractStats.dailyFarmDistribution > 0 ? contractStats.dailyFarmDistribution.toFixed(0) : "N/A"}
+            </div>
             <p className="text-xs text-muted-foreground">FARM tokens per day</p>
           </CardContent>
         </Card>

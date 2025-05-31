@@ -24,7 +24,8 @@ export default function ContractStatus() {
         <AlertTitle>Smart Contract Not Deployed</AlertTitle>
         <AlertDescription>
           The farming game smart contract has not been deployed yet. You can still explore the interface, but
-          functionality will be limited to mock data.
+          functionality will be limited to mock data. Data shown as "N/A" will be populated once the contract is
+          deployed.
         </AlertDescription>
       </Alert>
     )

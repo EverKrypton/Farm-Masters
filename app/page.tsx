@@ -38,10 +38,6 @@ export default function FarmingGame() {
     return <WelcomePage onEnterGame={handleEnterGame} />
   }
 
-  if (!isContractDeployed) {
-    return <ContractStatus />
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
       <div className="container mx-auto p-4">
