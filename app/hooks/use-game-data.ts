@@ -29,6 +29,7 @@ export function useGameData() {
     }
   }, [address, web3])
 
+  // Update the loadGameData function to handle the case when the contract isn't deployed
   const loadGameData = async () => {
     if (!address || !web3) return
 
@@ -36,28 +37,78 @@ export function useGameData() {
     try {
       const contract = new FarmingContract(web3)
 
-      // Load user stats from smart contract
-      const userStats = await contract.getUserStats(address)
-      const referralData = await contract.getReferralData(address)
-      const contractData = await contract.getContractStats()
+      // Check if contract is deployed
+      const isDeployed = await contract.isContractDeployed()
 
-      setGameStats({
-        totalHarvested: Number.parseFloat(web3.utils.fromWei(userStats.totalHarvested, "ether")),
-        activeFarms: Number(userStats.activeFarms),
-        totalInvested: Number.parseFloat(web3.utils.fromWei(userStats.totalInvested, "ether")),
-        dailyEarnings: await calculateDailyEarnings(contract, address),
-        referralEarnings: Number.parseFloat(web3.utils.fromWei(referralData.totalEarnings, "ether")),
-      })
+      if (!isDeployed) {
+        // Use mock data if contract is not deployed
+        setGameStats({
+          totalHarvested: 0,
+          activeFarms: 0,
+          totalInvested: 0,
+          dailyEarnings: 0,
+          referralEarnings: 0,
+        })
 
-      setFarmTokens(Number.parseFloat(web3.utils.fromWei(userStats.farmTokenBalance, "ether")))
-      setUsdtBalance(Number.parseFloat(web3.utils.fromWei(userStats.usdtBalance, "ether")))
+        setFarmTokens(0)
+        setUsdtBalance(0)
 
-      setContractStats({
-        totalUsdtInPools: Number.parseFloat(web3.utils.fromWei(contractData.totalUsdtInPools, "ether")),
-        currentFarmPrice: Number.parseFloat(web3.utils.fromWei(contractData.currentFarmPrice, "ether")),
-        totalFarmSupply: Number.parseFloat(web3.utils.fromWei(contractData.totalFarmSupply, "ether")),
-        dailyFarmDistribution: Number.parseFloat(web3.utils.fromWei(contractData.dailyFarmDistribution, "ether")),
-      })
+        setContractStats({
+          totalUsdtInPools: 0,
+          currentFarmPrice: 0,
+          totalFarmSupply: 0,
+          dailyFarmDistribution: 0,
+        })
+
+        setLoading(false)
+        return
+      }
+
+      // If contract is deployed, load real data
+      try {
+        // Load user stats from smart contract
+        const userStats = await contract.getUserStats(address)
+        const referralData = await contract.getReferralData(address)
+        const contractData = await contract.getContractStats()
+
+        setGameStats({
+          totalHarvested: Number.parseFloat(web3.utils.fromWei(userStats.totalHarvested, "ether")),
+          activeFarms: Number(userStats.activeFarms),
+          totalInvested: Number.parseFloat(web3.utils.fromWei(userStats.totalInvested, "ether")),
+          dailyEarnings: await calculateDailyEarnings(contract, address),
+          referralEarnings: Number.parseFloat(web3.utils.fromWei(referralData.totalEarnings, "ether")),
+        })
+
+        setFarmTokens(Number.parseFloat(web3.utils.fromWei(userStats.farmTokenBalance, "ether")))
+        setUsdtBalance(Number.parseFloat(web3.utils.fromWei(userStats.usdtBalance, "ether")))
+
+        setContractStats({
+          totalUsdtInPools: Number.parseFloat(web3.utils.fromWei(contractData.totalUsdtInPools, "ether")),
+          currentFarmPrice: Number.parseFloat(web3.utils.fromWei(contractData.currentFarmPrice, "ether")),
+          totalFarmSupply: Number.parseFloat(web3.utils.fromWei(contractData.totalFarmSupply, "ether")),
+          dailyFarmDistribution: Number.parseFloat(web3.utils.fromWei(contractData.dailyFarmDistribution, "ether")),
+        })
+      } catch (error) {
+        console.error("Error loading data from contract:", error)
+        // Fallback to mock data if there's an error
+        setGameStats({
+          totalHarvested: 0,
+          activeFarms: 0,
+          totalInvested: 0,
+          dailyEarnings: 0,
+          referralEarnings: 0,
+        })
+
+        setFarmTokens(0)
+        setUsdtBalance(0)
+
+        setContractStats({
+          totalUsdtInPools: 0,
+          currentFarmPrice: 0,
+          totalFarmSupply: 0,
+          dailyFarmDistribution: 0,
+        })
+      }
     } catch (error) {
       console.error("Error loading game data:", error)
     } finally {

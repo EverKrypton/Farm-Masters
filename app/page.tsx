@@ -9,13 +9,16 @@ import FarmingPools from "./components/farming-pools"
 import TokenSwap from "./components/token-swap"
 import DepositWithdraw from "./components/deposit-withdraw"
 import GameStats from "./components/game-stats"
+import WelcomePage from "./components/welcome-page"
+import ContractStatus from "./components/contract-status"
 import { useWallet } from "./hooks/use-wallet"
 import { useGameData } from "./hooks/use-game-data"
-import WelcomePage from "./components/welcome-page"
+import { useContract } from "./hooks/use-contract"
 
 export default function FarmingGame() {
   const { isConnected, address, balance } = useWallet()
   const { gameStats, farmTokens, usdtBalance, loading } = useGameData()
+  const { isContractDeployed } = useContract()
   const [showWelcome, setShowWelcome] = useState(true)
 
   useEffect(() => {
@@ -33,6 +36,10 @@ export default function FarmingGame() {
 
   if (showWelcome || !isConnected) {
     return <WelcomePage onEnterGame={handleEnterGame} />
+  }
+
+  if (!isContractDeployed) {
+    return <ContractStatus />
   }
 
   return (
@@ -57,6 +64,9 @@ export default function FarmingGame() {
             <WalletConnection />
           </div>
         </div>
+
+        {/* Contract Status */}
+        <ContractStatus />
 
         {/* Game Stats Overview */}
         <GameStats farmTokens={farmTokens} usdtBalance={usdtBalance} gameStats={gameStats} loading={loading} />

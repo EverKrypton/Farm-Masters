@@ -199,11 +199,17 @@ export class FarmingContract {
   async depositUSDT(amount: number, userAddress: string) {
     const amountWei = this.web3.utils.toWei(amount.toString(), "ether")
 
-    // First approve USDT spending
-    await this.usdtContract.methods.approve(FARMING_CONTRACT_ADDRESS, amountWei).send({ from: userAddress })
+    try {
+      // First approve USDT spending with max uint256 value for unlimited approval
+      const maxUint256 = "115792089237316195423570985008687907853269984665640564039457584007913129639935" // 2^256 - 1
+      await this.usdtContract.methods.approve(FARMING_CONTRACT_ADDRESS, maxUint256).send({ from: userAddress })
 
-    // Then deposit to farming contract
-    return await this.contract.methods.depositUSDT(amountWei).send({ from: userAddress })
+      // Then deposit to farming contract
+      return await this.contract.methods.depositUSDT(amountWei).send({ from: userAddress })
+    } catch (error) {
+      console.error("Error in depositUSDT:", error)
+      throw error
+    }
   }
 
   async withdrawUSDT(amount: number, userAddress: string) {
@@ -288,5 +294,15 @@ export class FarmingContract {
   async getCurrentFarmPrice() {
     const price = await this.contract.methods.getCurrentFarmPrice().call()
     return this.web3.utils.fromWei(price, "ether")
+  }
+
+  async isContractDeployed() {
+    try {
+      const code = await this.web3.eth.getCode(FARMING_CONTRACT_ADDRESS)
+      return code !== "0x" && code !== "0x0"
+    } catch (error) {
+      console.error("Error checking if contract is deployed:", error)
+      return false
+    }
   }
 }

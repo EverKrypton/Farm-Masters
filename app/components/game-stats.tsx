@@ -13,7 +13,7 @@ interface GameStatsProps {
     dailyEarnings: number
     referralEarnings: number
   }
-  contractStats: {
+  contractStats?: {
     totalUsdtInPools: number
     currentFarmPrice: number
     totalFarmSupply: number
@@ -22,7 +22,18 @@ interface GameStatsProps {
   loading: boolean
 }
 
-export default function GameStats({ farmTokens, usdtBalance, gameStats, contractStats, loading }: GameStatsProps) {
+export default function GameStats({
+  farmTokens,
+  usdtBalance,
+  gameStats,
+  contractStats = {
+    totalUsdtInPools: 0,
+    currentFarmPrice: 0,
+    totalFarmSupply: 0,
+    dailyFarmDistribution: 0,
+  },
+  loading,
+}: GameStatsProps) {
   if (loading) {
     return (
       <div className="grid gap-4 md:grid-cols-4">
