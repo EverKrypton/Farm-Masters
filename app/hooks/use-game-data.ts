@@ -29,19 +29,15 @@ export function useGameData() {
     }
   }, [address, web3])
 
-  // Update the loadGameData function to handle the case when the contract isn't deployed
   const loadGameData = async () => {
     if (!address || !web3) return
 
     setLoading(true)
     try {
       const contract = new FarmingContract(web3)
-
-      // Check if contract is deployed
       const isDeployed = await contract.isContractDeployed()
 
       if (!isDeployed) {
-        // Use empty data if contract is not deployed
         setGameStats({
           totalHarvested: 0,
           activeFarms: 0,
@@ -49,24 +45,19 @@ export function useGameData() {
           dailyEarnings: 0,
           referralEarnings: 0,
         })
-
         setFarmTokens(0)
         setUsdtBalance(0)
-
         setContractStats({
           totalUsdtInPools: 0,
           currentFarmPrice: 0,
           totalFarmSupply: 0,
           dailyFarmDistribution: 0,
         })
-
         setLoading(false)
         return
       }
 
-      // If contract is deployed, load real data
       try {
-        // Load user stats from smart contract
         const userStats = await contract.getUserStats(address)
         const referralData = await contract.getReferralData(address)
         const contractData = await contract.getContractStats()
@@ -75,7 +66,7 @@ export function useGameData() {
           totalHarvested: Number.parseFloat(web3.utils.fromWei(userStats.totalHarvested, "ether")),
           activeFarms: Number(userStats.activeFarms),
           totalInvested: Number.parseFloat(web3.utils.fromWei(userStats.totalInvested, "ether")),
-          dailyEarnings: await calculateDailyEarnings(contract, address),
+          dailyEarnings: 0,
           referralEarnings: Number.parseFloat(web3.utils.fromWei(referralData.totalEarnings, "ether")),
         })
 
@@ -90,7 +81,6 @@ export function useGameData() {
         })
       } catch (error) {
         console.error("Error loading data from contract:", error)
-        // Fallback to mock data if there's an error
         setGameStats({
           totalHarvested: 0,
           activeFarms: 0,
@@ -98,10 +88,8 @@ export function useGameData() {
           dailyEarnings: 0,
           referralEarnings: 0,
         })
-
         setFarmTokens(0)
         setUsdtBalance(0)
-
         setContractStats({
           totalUsdtInPools: 0,
           currentFarmPrice: 0,
@@ -113,31 +101,6 @@ export function useGameData() {
       console.error("Error loading game data:", error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const calculateDailyEarnings = async (contract: FarmingContract, userAddress: string) => {
-    try {
-      const userFarms = await contract.getUserFarms(userAddress)
-      let totalDailyEarnings = 0
-
-      for (const farmId of userFarms) {
-        const farmDetails = await contract.getFarmDetails(userAddress, farmId)
-        if (farmDetails.active) {
-          // Calculate daily earnings based on pool and user's share
-          const poolStats = await contract.getPoolStats(farmDetails.poolId)
-          const dailyPoolReward = contractStats.dailyFarmDistribution * (Number(poolStats.poolRewardPercentage) / 10000)
-          const userShare =
-            Number.parseFloat(web3.utils.fromWei(farmDetails.depositAmount, "ether")) /
-            Number.parseFloat(web3.utils.fromWei(poolStats.totalDeposited, "ether"))
-          totalDailyEarnings += dailyPoolReward * userShare
-        }
-      }
-
-      return totalDailyEarnings
-    } catch (error) {
-      console.error("Error calculating daily earnings:", error)
-      return 0
     }
   }
 

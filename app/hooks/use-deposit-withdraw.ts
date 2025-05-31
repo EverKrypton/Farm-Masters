@@ -10,6 +10,9 @@ export function useDepositWithdraw() {
   const [usdtBalance, setUsdtBalance] = useState(0)
   const [gameBalance, setGameBalance] = useState(0)
   const [farmTokens, setFarmTokens] = useState(0)
+  const [contractStats, setContractStats] = useState({
+    currentFarmPrice: 0,
+  })
 
   useEffect(() => {
     if (address && web3) {
@@ -22,6 +25,15 @@ export function useDepositWithdraw() {
 
     try {
       const contract = new FarmingContract(web3)
+      const isDeployed = await contract.isContractDeployed()
+
+      if (!isDeployed) {
+        setUsdtBalance(0)
+        setGameBalance(0)
+        setFarmTokens(0)
+        setContractStats({ currentFarmPrice: 0 })
+        return
+      }
 
       const [walletBalance, contractBalance, farmBalance] = await Promise.all([
         contract.getUSDTBalance(address),
@@ -29,15 +41,18 @@ export function useDepositWithdraw() {
         contract.getFarmTokenBalance(address),
       ])
 
+      const currentPrice = await contract.getCurrentFarmPrice()
+
       setUsdtBalance(Number.parseFloat(walletBalance))
       setGameBalance(Number.parseFloat(contractBalance))
       setFarmTokens(Number.parseFloat(farmBalance))
+      setContractStats({ currentFarmPrice: Number.parseFloat(currentPrice) })
     } catch (error) {
       console.error("Error loading balances:", error)
-      // Mock data fallback
-      setUsdtBalance(1000)
-      setGameBalance(150.25)
-      setFarmTokens(1250.75)
+      setUsdtBalance(0)
+      setGameBalance(0)
+      setFarmTokens(0)
+      setContractStats({ currentFarmPrice: 0 })
     }
   }
 
@@ -48,8 +63,6 @@ export function useDepositWithdraw() {
     try {
       const contract = new FarmingContract(web3)
       await contract.depositUSDT(amount, address)
-
-      // Refresh balances
       await loadBalances()
     } catch (error) {
       console.error("Error depositing:", error)
@@ -65,8 +78,6 @@ export function useDepositWithdraw() {
     try {
       const contract = new FarmingContract(web3)
       await contract.withdrawUSDT(amount, address)
-
-      // Refresh balances
       await loadBalances()
     } catch (error) {
       console.error("Error withdrawing:", error)
@@ -82,8 +93,6 @@ export function useDepositWithdraw() {
     try {
       const contract = new FarmingContract(web3)
       await contract.swapFarmToUSDT(farmTokens, address)
-
-      // Refresh balances
       await loadBalances()
     } catch (error) {
       console.error("Error converting FARM to USDT:", error)
@@ -100,6 +109,7 @@ export function useDepositWithdraw() {
     usdtBalance,
     gameBalance,
     farmTokens,
+    contractStats,
     refreshBalances: loadBalances,
   }
 }

@@ -40,6 +40,20 @@ export function useReferral() {
 
     try {
       const contract = new FarmingContract(web3)
+      const isDeployed = await contract.isContractDeployed()
+
+      if (!isDeployed) {
+        setReferralData({
+          myReferralCode: address.slice(-6).toUpperCase(),
+          totalReferrals: 0,
+          totalEarnings: 0,
+          availableEarnings: 0,
+          hasReferrer: false,
+          recentActivity: [],
+        })
+        return
+      }
+
       const data = await contract.getReferralData(address)
 
       setReferralData({
@@ -48,25 +62,17 @@ export function useReferral() {
         totalEarnings: data.totalEarnings || 0,
         availableEarnings: data.availableEarnings || 0,
         hasReferrer: data.hasReferrer || false,
-        recentActivity: data.recentActivity || [
-          { type: "Referral Deposit", amount: 5.0, date: "2 days ago" },
-          { type: "Referral Deposit", amount: 12.5, date: "1 week ago" },
-        ],
+        recentActivity: data.recentActivity || [],
       })
     } catch (error) {
       console.error("Error loading referral data:", error)
-      // Mock data fallback
       setReferralData({
         myReferralCode: address.slice(-6).toUpperCase(),
-        totalReferrals: 5,
-        totalEarnings: 125.5,
-        availableEarnings: 45.25,
+        totalReferrals: 0,
+        totalEarnings: 0,
+        availableEarnings: 0,
         hasReferrer: false,
-        recentActivity: [
-          { type: "Referral Deposit", amount: 5.0, date: "2 days ago" },
-          { type: "Referral Deposit", amount: 12.5, date: "1 week ago" },
-          { type: "Referral Deposit", amount: 27.75, date: "2 weeks ago" },
-        ],
+        recentActivity: [],
       })
     }
   }
@@ -78,8 +84,6 @@ export function useReferral() {
     try {
       const contract = new FarmingContract(web3)
       await contract.withdrawReferralEarnings(address)
-
-      // Refresh data after withdrawal
       await loadReferralData()
     } catch (error) {
       console.error("Error withdrawing referral earnings:", error)

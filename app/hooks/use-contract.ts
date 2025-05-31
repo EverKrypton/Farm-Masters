@@ -5,7 +5,7 @@ import { useWallet } from "./use-wallet"
 import { FARMING_CONTRACT_ADDRESS } from "../contracts/farming-contract"
 
 export function useContract() {
-  const { web3, address } = useWallet()
+  const { web3 } = useWallet()
   const [isContractDeployed, setIsContractDeployed] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -20,7 +20,6 @@ export function useContract() {
 
     setLoading(true)
     try {
-      // Check if the contract address is valid and has code
       const code = await web3.eth.getCode(FARMING_CONTRACT_ADDRESS)
       setIsContractDeployed(code !== "0x" && code !== "0x0")
     } catch (error) {

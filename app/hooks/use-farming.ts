@@ -32,6 +32,13 @@ export function useFarming() {
 
     try {
       const contract = new FarmingContract(web3)
+      const isDeployed = await contract.isContractDeployed()
+
+      if (!isDeployed) {
+        setActiveFarms([])
+        return
+      }
+
       const farmIds = await contract.getUserFarms(address)
 
       const farms = await Promise.all(
@@ -56,6 +63,7 @@ export function useFarming() {
       setActiveFarms(farms.filter((farm) => farm.progress < 100 || farm.expectedReward > 0))
     } catch (error) {
       console.error("Error loading active farms:", error)
+      setActiveFarms([])
     }
   }
 
@@ -75,16 +83,16 @@ export function useFarming() {
   }
 
   const calculateProgress = (startTime: number, durationDays: number) => {
-    const duration = durationDays * 24 * 60 * 60 // convert to seconds
+    const duration = durationDays * 24 * 60 * 60
     const elapsed = Date.now() / 1000 - startTime
     return Math.min(100, (elapsed / duration) * 100)
   }
 
   const calculateTimeLeft = (startTime: number, durationDays: number) => {
-    const duration = durationDays * 24 * 60 * 60 // convert to seconds
+    const duration = durationDays * 24 * 60 * 60
     const elapsed = Date.now() / 1000 - startTime
     const remaining = duration - elapsed
-    return Math.max(0, Math.ceil(remaining / (24 * 60 * 60))) // convert to days
+    return Math.max(0, Math.ceil(remaining / (24 * 60 * 60)))
   }
 
   const plantCrop = async (poolId: number, amount: number) => {
@@ -94,8 +102,6 @@ export function useFarming() {
     try {
       const contract = new FarmingContract(web3)
       await contract.startFarming(poolId, amount, address)
-
-      // Refresh active farms
       await loadActiveFarms()
     } catch (error) {
       console.error("Error planting crop:", error)
@@ -111,8 +117,6 @@ export function useFarming() {
     try {
       const contract = new FarmingContract(web3)
       await contract.harvestFarm(farmId, address)
-
-      // Refresh active farms
       await loadActiveFarms()
     } catch (error) {
       console.error("Error harvesting crop:", error)

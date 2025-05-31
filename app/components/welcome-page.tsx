@@ -15,17 +15,18 @@ export default function WelcomePage({ onEnterGame }: WelcomePageProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
-      {/* Hero Section */}
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 bg-gradient-to-r from-green-600 to-blue-600 rounded-full flex items-center justify-center">
-              <Sprout className="w-10 h-10 text-white" />
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-green-600 to-blue-600 rounded-full flex items-center justify-center">
+              <Sprout className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
             </div>
           </div>
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-4">CryptoFarm</h1>
-          <p className="text-xl md:text-2xl text-gray-600 mb-6">The Ultimate DeFi Farming Experience on BSC</p>
-          <p className="text-lg text-gray-500 max-w-2xl mx-auto mb-8">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-gray-900 mb-4">CryptoFarm</h1>
+          <p className="text-lg sm:text-xl md:text-2xl text-gray-600 mb-6">
+            The Ultimate DeFi Farming Experience on BSC
+          </p>
+          <p className="text-base sm:text-lg text-gray-500 max-w-2xl mx-auto mb-8">
             Grow your wealth with our innovative farming pools. Earn FARM tokens, refer friends, and harvest real
             returns on the Binance Smart Chain.
           </p>
@@ -39,14 +40,13 @@ export default function WelcomePage({ onEnterGame }: WelcomePageProps) {
           )}
         </div>
 
-        {/* Features Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-12">
           <Card className="text-center hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Coins className="w-6 h-6 text-green-600" />
               </div>
-              <CardTitle>Multiple Farming Pools</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Multiple Farming Pools</CardTitle>
             </CardHeader>
             <CardContent>
               <CardDescription>
@@ -61,7 +61,7 @@ export default function WelcomePage({ onEnterGame }: WelcomePageProps) {
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Users className="w-6 h-6 text-blue-600" />
               </div>
-              <CardTitle>10% Referral System</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">10% Referral System</CardTitle>
             </CardHeader>
             <CardContent>
               <CardDescription>
@@ -76,7 +76,7 @@ export default function WelcomePage({ onEnterGame }: WelcomePageProps) {
               <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <TrendingUp className="w-6 h-6 text-purple-600" />
               </div>
-              <CardTitle>High Yield Returns</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">High Yield Returns</CardTitle>
             </CardHeader>
             <CardContent>
               <CardDescription>
@@ -90,7 +90,7 @@ export default function WelcomePage({ onEnterGame }: WelcomePageProps) {
               <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Shield className="w-6 h-6 text-red-600" />
               </div>
-              <CardTitle>Secure & Audited</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Secure & Audited</CardTitle>
             </CardHeader>
             <CardContent>
               <CardDescription>
@@ -105,7 +105,7 @@ export default function WelcomePage({ onEnterGame }: WelcomePageProps) {
               <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Smartphone className="w-6 h-6 text-yellow-600" />
               </div>
-              <CardTitle>Mobile Optimized</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Mobile Optimized</CardTitle>
             </CardHeader>
             <CardContent>
               <CardDescription>
@@ -119,7 +119,7 @@ export default function WelcomePage({ onEnterGame }: WelcomePageProps) {
               <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Sprout className="w-6 h-6 text-indigo-600" />
               </div>
-              <CardTitle>Instant Harvesting</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Instant Harvesting</CardTitle>
             </CardHeader>
             <CardContent>
               <CardDescription>
@@ -130,10 +130,9 @@ export default function WelcomePage({ onEnterGame }: WelcomePageProps) {
           </Card>
         </div>
 
-        {/* Farming Pools Preview */}
         <div className="mb-12">
-          <h2 className="text-3xl font-bold text-center mb-8">Farming Pools</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8">Farming Pools</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             {[
               { name: "Starter Farm", icon: "🌱", apy: "15%", min: "$10", rarity: "Common", color: "bg-gray-100" },
               { name: "Growth Farm", icon: "🌾", apy: "25%", min: "$25", rarity: "Uncommon", color: "bg-green-100" },
@@ -142,15 +141,15 @@ export default function WelcomePage({ onEnterGame }: WelcomePageProps) {
             ].map((pool, index) => (
               <Card key={index} className="text-center">
                 <CardHeader className="pb-2">
-                  <div className="text-4xl mb-2">{pool.icon}</div>
-                  <CardTitle className="text-lg">{pool.name}</CardTitle>
+                  <div className="text-2xl sm:text-4xl mb-2">{pool.icon}</div>
+                  <CardTitle className="text-sm sm:text-lg">{pool.name}</CardTitle>
                   <Badge className={pool.color}>{pool.rarity}</Badge>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    <div className="text-2xl font-bold text-green-600">{pool.apy}</div>
-                    <div className="text-sm text-gray-600">APY</div>
-                    <div className="text-sm">Min: {pool.min}</div>
+                    <div className="text-xl sm:text-2xl font-bold text-green-600">{pool.apy}</div>
+                    <div className="text-xs sm:text-sm text-gray-600">APY</div>
+                    <div className="text-xs sm:text-sm">Min: {pool.min}</div>
                   </div>
                 </CardContent>
               </Card>
@@ -158,10 +157,9 @@ export default function WelcomePage({ onEnterGame }: WelcomePageProps) {
           </div>
         </div>
 
-        {/* How It Works */}
         <div className="mb-12">
-          <h2 className="text-3xl font-bold text-center mb-8">How It Works</h2>
-          <div className="grid md:grid-cols-4 gap-6">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8">How It Works</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
             {[
               { step: "1", title: "Connect Wallet", desc: "Connect your MetaMask wallet to BSC network" },
               { step: "2", title: "Deposit USDT", desc: "Deposit USDT BEP20 tokens to start farming" },
@@ -169,18 +167,17 @@ export default function WelcomePage({ onEnterGame }: WelcomePageProps) {
               { step: "4", title: "Harvest & Earn", desc: "Harvest FARM tokens and convert to USDT" },
             ].map((item, index) => (
               <div key={index} className="text-center">
-                <div className="w-12 h-12 bg-gradient-to-r from-green-600 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-lg">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-green-600 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-sm sm:text-lg">
                   {item.step}
                 </div>
-                <h3 className="font-semibold mb-2">{item.title}</h3>
-                <p className="text-sm text-gray-600">{item.desc}</p>
+                <h3 className="font-semibold mb-2 text-sm sm:text-base">{item.title}</h3>
+                <p className="text-xs sm:text-sm text-gray-600">{item.desc}</p>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="text-center text-gray-500 text-sm">
+        <div className="text-center text-gray-500 text-xs sm:text-sm">
           <p>© 2024 CryptoFarm. Built on Binance Smart Chain.</p>
           <p className="mt-2">Always DYOR (Do Your Own Research) before investing.</p>
         </div>

@@ -1,12 +1,10 @@
 "use client"
 
-// Smart Contract addresses and ABIs
-export const FARMING_CONTRACT_ADDRESS = "0x..." // Your deployed contract address
+export const FARMING_CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000" // Replace with your deployed contract address
 export const USDT_CONTRACT_ADDRESS = "0x55d398326f99059fF775485246999027B3197955" // USDT BEP20 on BSC
-export const TREASURY_WALLET = "0x..." // Treasury wallet address
+export const TREASURY_WALLET = "0x0000000000000000000000000000000000000000" // Replace with your treasury wallet
 
 export const FARMING_CONTRACT_ABI = [
-  // Deposit and Withdraw functions
   {
     inputs: [{ internalType: "uint256", name: "amount", type: "uint256" }],
     name: "depositUSDT",
@@ -21,7 +19,6 @@ export const FARMING_CONTRACT_ABI = [
     stateMutability: "nonpayable",
     type: "function",
   },
-  // Farming functions
   {
     inputs: [
       { internalType: "uint256", name: "poolId", type: "uint256" },
@@ -39,7 +36,6 @@ export const FARMING_CONTRACT_ABI = [
     stateMutability: "nonpayable",
     type: "function",
   },
-  // Referral functions
   {
     inputs: [{ internalType: "address", name: "referrer", type: "address" }],
     name: "setReferrer",
@@ -54,7 +50,13 @@ export const FARMING_CONTRACT_ABI = [
     stateMutability: "nonpayable",
     type: "function",
   },
-  // View functions
+  {
+    inputs: [{ internalType: "uint256", name: "farmAmount", type: "uint256" }],
+    name: "swapFarmToUSDT",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
   {
     inputs: [{ internalType: "address", name: "user", type: "address" }],
     name: "getUserFarms",
@@ -75,6 +77,7 @@ export const FARMING_CONTRACT_ABI = [
       { internalType: "uint256", name: "lastHarvestTime", type: "uint256" },
       { internalType: "bool", name: "active", type: "bool" },
       { internalType: "uint256", name: "pendingReward", type: "uint256" },
+      { internalType: "uint256", name: "totalHarvested", type: "uint256" },
     ],
     stateMutability: "view",
     type: "function",
@@ -140,6 +143,20 @@ export const FARMING_CONTRACT_ABI = [
     stateMutability: "view",
     type: "function",
   },
+  {
+    inputs: [{ internalType: "address", name: "user", type: "address" }],
+    name: "userBalances",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "farmToken",
+    outputs: [{ internalType: "address", name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
 ]
 
 export const USDT_CONTRACT_ABI = [
@@ -183,7 +200,6 @@ export const FARM_TOKEN_ABI = [
   },
 ]
 
-// Web3 interaction class
 export class FarmingContract {
   private web3: any
   private contract: any
@@ -200,11 +216,8 @@ export class FarmingContract {
     const amountWei = this.web3.utils.toWei(amount.toString(), "ether")
 
     try {
-      // First approve USDT spending with max uint256 value for unlimited approval
-      const maxUint256 = "115792089237316195423570985008687907853269984665640564039457584007913129639935" // 2^256 - 1
+      const maxUint256 = "115792089237316195423570985008687907853269984665640564039457584007913129639935"
       await this.usdtContract.methods.approve(FARMING_CONTRACT_ADDRESS, maxUint256).send({ from: userAddress })
-
-      // Then deposit to farming contract
       return await this.contract.methods.depositUSDT(amountWei).send({ from: userAddress })
     } catch (error) {
       console.error("Error in depositUSDT:", error)
@@ -239,7 +252,6 @@ export class FarmingContract {
     return await this.contract.methods.swapFarmToUSDT(amountWei).send({ from: userAddress })
   }
 
-  // View functions
   async getUserFarms(userAddress: string) {
     return await this.contract.methods.getUserFarms(userAddress).call()
   }
@@ -267,16 +279,6 @@ export class FarmingContract {
     this.farmTokenContract = new this.web3.eth.Contract(FARM_TOKEN_ABI, farmTokenAddress)
     const balance = await this.farmTokenContract.methods.balanceOf(userAddress).call()
     return this.web3.utils.fromWei(balance, "ether")
-  }
-
-  async getUserTotalInvested(userAddress: string) {
-    // This would need to be implemented in the smart contract
-    return 500 // Mock data
-  }
-
-  async getUserDailyEarnings(userAddress: string) {
-    // This would need to be implemented in the smart contract
-    return 12.5 // Mock data
   }
 
   async getUserStats(userAddress: string) {

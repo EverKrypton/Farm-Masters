@@ -68,13 +68,9 @@ export function useWallet() {
 
     setLoading(true)
     try {
-      // Request account access
       const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
-
-      // Switch to BSC network
       await switchToBSC()
 
-      // Initialize Web3
       const Web3 = (await import("web3")).default
       const web3Instance = new Web3(window.ethereum)
       setWeb3(web3Instance)
@@ -100,7 +96,7 @@ export function useWallet() {
     try {
       await window.ethereum.request({
         method: "wallet_switchEthereumChain",
-        params: [{ chainId: "0x38" }], // BSC Mainnet
+        params: [{ chainId: "0x38" }],
       })
     } catch (switchError: any) {
       if (switchError.code === 4902) {

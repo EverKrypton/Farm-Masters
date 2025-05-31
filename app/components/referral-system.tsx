@@ -28,16 +28,15 @@ export default function ReferralSystem() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Referral Overview */}
-      <div className="grid gap-4 md:grid-cols-3">
+    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Referrals</CardTitle>
             <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{referralData.totalReferrals}</div>
+            <div className="text-xl sm:text-2xl font-bold">{referralData.totalReferrals}</div>
             <p className="text-xs text-muted-foreground">Friends referred</p>
           </CardContent>
         </Card>
@@ -48,7 +47,7 @@ export default function ReferralSystem() {
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{referralData.totalEarnings.toFixed(2)} USDT</div>
+            <div className="text-xl sm:text-2xl font-bold">{referralData.totalEarnings.toFixed(2)} USDT</div>
             <p className="text-xs text-muted-foreground">Total earned</p>
           </CardContent>
         </Card>
@@ -59,13 +58,12 @@ export default function ReferralSystem() {
             <TrendingUp className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{referralData.availableEarnings.toFixed(2)} USDT</div>
+            <div className="text-xl sm:text-2xl font-bold">{referralData.availableEarnings.toFixed(2)} USDT</div>
             <p className="text-xs text-muted-foreground">Ready to withdraw</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Referral Link */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -81,12 +79,12 @@ export default function ReferralSystem() {
               readOnly
               className="font-mono text-sm"
             />
-            <Button onClick={copyReferralLink} variant="outline">
+            <Button onClick={copyReferralLink} variant="outline" size="sm">
               <Copy className="w-4 h-4" />
             </Button>
           </div>
 
-          <div className="bg-green-50 p-4 rounded-lg">
+          <div className="bg-green-50 p-3 sm:p-4 rounded-lg">
             <h4 className="font-medium text-green-800 mb-2">How Referrals Work</h4>
             <ul className="text-sm text-green-700 space-y-1">
               <li>• Share your referral link with friends</li>
@@ -98,7 +96,6 @@ export default function ReferralSystem() {
         </CardContent>
       </Card>
 
-      {/* Enter Referral Code */}
       {!referralData.hasReferrer && (
         <Card>
           <CardHeader>
@@ -120,7 +117,6 @@ export default function ReferralSystem() {
         </Card>
       )}
 
-      {/* Withdraw Referral Earnings */}
       {referralData.availableEarnings > 0 && (
         <Card>
           <CardHeader>
@@ -128,10 +124,12 @@ export default function ReferralSystem() {
             <CardDescription>Withdraw your referral commissions directly to your wallet (no fees)</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg mb-4">
+            <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg mb-4">
               <div>
                 <p className="font-medium">Available to Withdraw</p>
-                <p className="text-2xl font-bold text-green-600">{referralData.availableEarnings.toFixed(2)} USDT</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-600">
+                  {referralData.availableEarnings.toFixed(2)} USDT
+                </p>
               </div>
               <Button onClick={handleWithdrawReferrals} disabled={loading}>
                 {loading ? "Processing..." : "Withdraw All"}
@@ -141,7 +139,6 @@ export default function ReferralSystem() {
         </Card>
       )}
 
-      {/* Referral History */}
       <Card>
         <CardHeader>
           <CardTitle>Referral Activity</CardTitle>

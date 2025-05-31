@@ -18,7 +18,7 @@ const FARMING_POOLS = [
     minDeposit: 10,
     maxDeposit: 500,
     dailyReward: "1%",
-    duration: 7, // days
+    duration: 7,
     icon: "🌱",
     rarity: "Common",
   },
@@ -64,7 +64,6 @@ export default function FarmingPools() {
 
   const handlePlant = async (poolId: number) => {
     if (!depositAmount || Number.parseFloat(depositAmount) <= 0) return
-
     await plantCrop(poolId, Number.parseFloat(depositAmount))
     setDepositAmount("")
     setSelectedPool(null)
@@ -86,24 +85,25 @@ export default function FarmingPools() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Active Farms */}
+    <div className="space-y-4 sm:space-y-6">
       {activeFarms.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Sprout className="w-5 h-5 text-green-600" />
             Your Active Farms
           </h3>
-          <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {activeFarms.map((farm) => (
               <Card key={farm.id} className="border-green-200">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl">{farm.icon}</span>
+                      <span className="text-xl sm:text-2xl">{farm.icon}</span>
                       <div>
-                        <CardTitle className="text-base">{farm.name}</CardTitle>
-                        <CardDescription className="text-sm">{farm.deposited} USDT deposited</CardDescription>
+                        <CardTitle className="text-sm sm:text-base">{farm.name}</CardTitle>
+                        <CardDescription className="text-xs sm:text-sm">
+                          {farm.deposited} USDT deposited
+                        </CardDescription>
                       </div>
                     </div>
                     <Badge className={getRarityColor(farm.rarity)}>{farm.rarity}</Badge>
@@ -142,22 +142,21 @@ export default function FarmingPools() {
         </div>
       )}
 
-      {/* Available Pools */}
       <div>
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Droplets className="w-5 h-5 text-blue-600" />
           Available Farming Pools
         </h3>
-        <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-4">
           {FARMING_POOLS.map((pool) => (
             <Card key={pool.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="text-3xl">{pool.icon}</span>
+                    <span className="text-2xl sm:text-3xl">{pool.icon}</span>
                     <div>
-                      <CardTitle className="text-lg">{pool.name}</CardTitle>
-                      <CardDescription className="text-sm">{pool.description}</CardDescription>
+                      <CardTitle className="text-sm sm:text-lg">{pool.name}</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">{pool.description}</CardDescription>
                     </div>
                   </div>
                   <Badge className={getRarityColor(pool.rarity)}>{pool.rarity}</Badge>

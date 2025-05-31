@@ -45,13 +45,13 @@ export default function TokenSwap() {
     <div className="max-w-md mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ArrowUpDown className="w-5 h-5" />
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <ArrowUpDown className="w-4 h-4 sm:w-5 sm:h-5" />
             Token Swap
           </CardTitle>
           <CardDescription>Exchange between USDT and FARM tokens</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 sm:space-y-6">
           {/* From Token */}
           <div className="space-y-2">
             <Label>From</Label>
@@ -61,7 +61,7 @@ export default function TokenSwap() {
                 placeholder="0.0"
                 value={fromAmount}
                 onChange={(e) => handleFromAmountChange(e.target.value)}
-                className="pr-20"
+                className="pr-16 sm:pr-20"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 <span className="text-sm font-medium text-gray-600">{fromToken}</span>
@@ -71,8 +71,13 @@ export default function TokenSwap() {
 
           {/* Swap Direction Button */}
           <div className="flex justify-center">
-            <Button variant="outline" size="icon" onClick={handleSwapDirection} className="rounded-full">
-              <ArrowUpDown className="w-4 h-4" />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleSwapDirection}
+              className="rounded-full w-8 h-8 sm:w-10 sm:h-10"
+            >
+              <ArrowUpDown className="w-3 h-3 sm:w-4 sm:h-4" />
             </Button>
           </div>
 
@@ -80,7 +85,7 @@ export default function TokenSwap() {
           <div className="space-y-2">
             <Label>To</Label>
             <div className="relative">
-              <Input type="number" placeholder="0.0" value={toAmount} readOnly className="pr-20 bg-gray-50" />
+              <Input type="number" placeholder="0.0" value={toAmount} readOnly className="pr-16 sm:pr-20 bg-gray-50" />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 <span className="text-sm font-medium text-gray-600">{toToken}</span>
               </div>
