@@ -83,6 +83,10 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable, Pausable {
     mapping(address => bool) public isEligibleForAirdrop;
     mapping(address => uint256) public weeklyDepositAmount;
     
+    // Owner withdrawal tracking
+    uint256 public totalOwnerWithdrawals;
+    uint256 public lastOwnerWithdrawal;
+    
     struct FarmingPool {
         uint256 minDeposit;
         uint256 maxDeposit;
@@ -144,6 +148,8 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable, Pausable {
     event DailyDistribution(uint256 amount, uint256 timestamp);
     event WeeklyAirdrop(uint256 totalAmount, uint256 eligibleUsers, uint256 timestamp);
     event AirdropClaimed(address indexed user, uint256 amount);
+    event OwnerWithdrawal(address indexed owner, uint256 amount, uint256 timestamp);
+    event EmergencyWithdrawal(address indexed owner, uint256 amount, uint256 timestamp);
     
     modifier onlyInvested() {
         require(userStats[msg.sender].hasInvested, "Must invest before using this function");
@@ -643,6 +649,31 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable, Pausable {
         );
     }
     
+    function getOwnerWithdrawalInfo() external view returns (
+        uint256 totalWithdrawals,
+        uint256 lastWithdrawal,
+        uint256 contractBalance,
+        uint256 availableForWithdrawal
+    ) {
+        uint256 contractBalance = usdtToken.balanceOf(address(this));
+        
+        // Calculate total user balances (funds that belong to users)
+        uint256 totalUserFunds = 0;
+        // Note: In a production environment, you'd need to track this more efficiently
+        // This is a simplified calculation
+        
+        // Available for withdrawal = contract balance - total user obligations
+        uint256 availableForWithdrawal = contractBalance > totalUsdtInPools ? 
+            contractBalance.sub(totalUsdtInPools) : 0;
+            
+        return (
+            totalOwnerWithdrawals,
+            lastOwnerWithdrawal,
+            contractBalance,
+            availableForWithdrawal
+        );
+    }
+    
     // Owner functions
     function updateTreasuryWallet(address _treasuryWallet) external onlyOwner {
         require(_treasuryWallet != address(0), "Invalid treasury wallet");
@@ -673,14 +704,78 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable, Pausable {
         _unpause();
     }
     
-    function emergencyWithdraw() external onlyOwner {
-        uint256 balance = usdtToken.balanceOf(address(this));
-        require(usdtToken.transfer(owner(), balance), "Transfer failed");
+    /**
+     * @dev Owner can withdraw USDT from the contract
+     * @param amount Amount of USDT to withdraw
+     * @notice This function allows the owner to withdraw excess USDT that is not allocated to active farms
+     * Only withdraws funds that are not committed to user farming activities
+     */
+    function ownerWithdrawUSDT(uint256 amount) external onlyOwner nonReentrant {
+        require(amount > 0, "Amount must be greater than 0");
+        
+        uint256 contractBalance = usdtToken.balanceOf(address(this));
+        require(contractBalance >= amount, "Insufficient contract balance");
+        
+        // Ensure we don't withdraw funds that are committed to active farms
+        // totalUsdtInPools represents USDT currently locked in active farming
+        uint256 availableForWithdrawal = contractBalance > totalUsdtInPools ? 
+            contractBalance.sub(totalUsdtInPools) : 0;
+            
+        require(availableForWithdrawal >= amount, "Cannot withdraw funds committed to active farms");
+        
+        // Update tracking
+        totalOwnerWithdrawals = totalOwnerWithdrawals.add(amount);
+        lastOwnerWithdrawal = block.timestamp;
+        
+        // Transfer USDT to owner
+        require(usdtToken.transfer(owner(), amount), "Transfer failed");
+        
+        emit OwnerWithdrawal(owner(), amount, block.timestamp);
     }
     
+    /**
+     * @dev Emergency withdrawal function - withdraws all USDT to owner
+     * @notice This is an emergency function that should only be used in critical situations
+     * It withdraws all USDT regardless of active farms (use with extreme caution)
+     */
+    function emergencyWithdrawUSDT() external onlyOwner nonReentrant {
+        uint256 balance = usdtToken.balanceOf(address(this));
+        require(balance > 0, "No USDT to withdraw");
+        
+        // Update tracking
+        totalOwnerWithdrawals = totalOwnerWithdrawals.add(balance);
+        lastOwnerWithdrawal = block.timestamp;
+        
+        // Transfer all USDT to owner
+        require(usdtToken.transfer(owner(), balance), "Transfer failed");
+        
+        emit EmergencyWithdrawal(owner(), balance, block.timestamp);
+    }
+    
+    /**
+     * @dev Get the maximum amount the owner can safely withdraw
+     * @return The amount of USDT available for owner withdrawal without affecting active farms
+     */
+    function getMaxOwnerWithdrawal() external view returns (uint256) {
+        uint256 contractBalance = usdtToken.balanceOf(address(this));
+        
+        if (contractBalance <= totalUsdtInPools) {
+            return 0;
+        }
+        
+        return contractBalance.sub(totalUsdtInPools);
+    }
+    
+    /**
+     * @dev Rescue tokens accidentally sent to the contract (except USDT and FARM)
+     * @param token Address of the token to rescue
+     * @param amount Amount of tokens to rescue
+     */
     function rescueTokens(address token, uint256 amount) external onlyOwner {
-        require(token != address(usdtToken), "Cannot rescue USDT");
-        require(token != address(farmToken), "Cannot rescue FARM");
+        require(token != address(usdtToken), "Cannot rescue USDT - use ownerWithdrawUSDT");
+        require(token != address(farmToken), "Cannot rescue FARM tokens");
+        require(token != address(0), "Invalid token address");
+        
         IERC20(token).transfer(owner(), amount);
     }
 }
