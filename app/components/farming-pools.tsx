@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { Sprout, Clock, Coins, Droplets, Gift, TrendingUp } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Sprout, Clock, Coins, Droplets, Gift, TrendingUp, AlertTriangle, Wallet } from "lucide-react"
 import { useFarming } from "../hooks/use-farming"
 
 const FARMING_POOLS = [
@@ -62,7 +63,7 @@ const FARMING_POOLS = [
 ]
 
 export default function FarmingPools() {
-  const { activeFarms, plantCrop, harvestCrop, loading, currentFarmPrice } = useFarming()
+  const { activeFarms, plantCrop, harvestCrop, loading, currentFarmPrice, gameBalance } = useFarming()
   const [selectedPool, setSelectedPool] = useState<number | null>(null)
   const [depositAmount, setDepositAmount] = useState("")
 
@@ -94,8 +95,34 @@ export default function FarmingPools() {
     return farmTokens
   }
 
+  const isEarlyHarvest = (startTime: number) => {
+    const oneWeek = 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
+    return Date.now() - startTime * 1000 < oneWeek
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Game Balance Display */}
+      <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-blue-800">Game Balance</h3>
+                <p className="text-sm text-blue-600">Available for farming</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-blue-700">{gameBalance.toFixed(2)} USDT</div>
+              <div className="text-sm text-blue-600">Ready to farm</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Current FARM Price Display */}
       <Card className="bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
         <CardContent className="p-4">
@@ -118,6 +145,15 @@ export default function FarmingPools() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Early Harvest Warning */}
+      <Alert className="bg-red-50 border-red-200">
+        <AlertTriangle className="h-4 w-4 text-red-600" />
+        <AlertDescription className="text-red-800">
+          <strong>Early Harvest Penalty:</strong> Harvesting within the first 7 days incurs a 50% penalty on rewards.
+          Wait at least 1 week for full rewards.
+        </AlertDescription>
+      </Alert>
 
       {activeFarms.length > 0 && (
         <div>
@@ -162,6 +198,16 @@ export default function FarmingPools() {
                     </div>
                   </div>
 
+                  {/* Early Harvest Warning */}
+                  {isEarlyHarvest(farm.startTime) && farm.expectedReward > 0 && (
+                    <Alert className="bg-orange-50 border-orange-200">
+                      <AlertTriangle className="h-3 w-3 text-orange-600" />
+                      <AlertDescription className="text-xs text-orange-800">
+                        <strong>Early Harvest:</strong> 50% penalty applies (first 7 days)
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <div className="bg-purple-50 p-2 rounded-lg">
                     <div className="flex items-center gap-2 mb-1">
                       <Gift className="w-3 h-3 text-purple-600" />
@@ -173,15 +219,22 @@ export default function FarmingPools() {
                   </div>
 
                   {farm.expectedReward > 0 && (
-                    <Button onClick={() => harvestCrop(farm.id)} disabled={loading} className="w-full">
+                    <Button
+                      onClick={() => harvestCrop(farm.id)}
+                      disabled={loading}
+                      className="w-full"
+                      variant={isEarlyHarvest(farm.startTime) ? "destructive" : "default"}
+                    >
                       <Sprout className="w-4 h-4 mr-2" />
-                      Harvest ({farm.expectedReward.toFixed(2)} FARM)
+                      {isEarlyHarvest(farm.startTime)
+                        ? `Harvest Early (${(farm.expectedReward * 0.5).toFixed(2)} FARM)`
+                        : `Harvest (${farm.expectedReward.toFixed(2)} FARM)`}
                     </Button>
                   )}
 
                   {farm.progress >= 100 && farm.expectedReward === 0 && (
                     <div className="text-center text-sm text-green-600 font-medium">
-                      ✅ Farm Completed! Bonus tokens claimed.
+                      ✅ Farm Completed! All tokens transferred to your wallet.
                     </div>
                   )}
                 </CardContent>
@@ -243,7 +296,7 @@ export default function FarmingPools() {
                 {selectedPool === pool.id ? (
                   <div className="space-y-3">
                     <div>
-                      <Label htmlFor={`deposit-${pool.id}`}>Deposit Amount (USDT)</Label>
+                      <Label htmlFor={`deposit-${pool.id}`}>Amount from Game Balance (USDT)</Label>
                       <Input
                         id={`deposit-${pool.id}`}
                         type="number"
@@ -251,8 +304,11 @@ export default function FarmingPools() {
                         value={depositAmount}
                         onChange={(e) => setDepositAmount(e.target.value)}
                         min={pool.minDeposit}
-                        max={pool.maxDeposit}
+                        max={Math.min(pool.maxDeposit, gameBalance)}
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Available: ${gameBalance.toFixed(2)} USDT in game balance
+                      </p>
                       {depositAmount && Number.parseFloat(depositAmount) > 0 && (
                         <div className="text-xs text-purple-600 mt-1">
                           Completion bonus: ~
@@ -264,10 +320,15 @@ export default function FarmingPools() {
                     <div className="flex gap-2">
                       <Button
                         onClick={() => handlePlant(pool.id)}
-                        disabled={loading || !depositAmount || Number.parseFloat(depositAmount) < pool.minDeposit}
+                        disabled={
+                          loading ||
+                          !depositAmount ||
+                          Number.parseFloat(depositAmount) < pool.minDeposit ||
+                          Number.parseFloat(depositAmount) > gameBalance
+                        }
                         className="flex-1"
                       >
-                        Plant Crop
+                        Start Farming
                       </Button>
                       <Button variant="outline" onClick={() => setSelectedPool(null)} className="flex-1">
                         Cancel
@@ -275,8 +336,12 @@ export default function FarmingPools() {
                     </div>
                   </div>
                 ) : (
-                  <Button onClick={() => setSelectedPool(pool.id)} className="w-full">
-                    Start Farming
+                  <Button
+                    onClick={() => setSelectedPool(pool.id)}
+                    className="w-full"
+                    disabled={gameBalance < pool.minDeposit}
+                  >
+                    {gameBalance < pool.minDeposit ? "Insufficient Balance" : "Start Farming"}
                   </Button>
                 )}
               </CardContent>
@@ -284,6 +349,15 @@ export default function FarmingPools() {
           ))}
         </div>
       </div>
+
+      {gameBalance < 10 && (
+        <Alert className="bg-blue-50 border-blue-200">
+          <Wallet className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-800">
+            <strong>Need more funds?</strong> Go to the Deposit section to add USDT to your game balance for farming.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   )
 }

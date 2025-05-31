@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
 contract FarmToken is ERC20, Ownable {
     uint256 public constant MAX_SUPPLY = 10_000_000 * 10**18; // 10 million tokens
@@ -43,7 +44,7 @@ contract FarmToken is ERC20, Ownable {
     }
 }
 
-contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
+contract EnhancedFarmingGame is ReentrancyGuard, Ownable, Pausable {
     using SafeMath for uint256;
     
     IERC20 public immutable usdtToken;
@@ -56,6 +57,8 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
     uint256 public constant SWAP_FEE = 100; // 1% in basis points for FARM to USDT swaps
     uint256 public constant REFERRAL_COMMISSION = 1000; // 10% in basis points
     uint256 public constant BASIS_POINTS = 10000;
+    uint256 public constant EARLY_HARVEST_PENALTY = 5000; // 50% penalty for early harvest
+    uint256 public constant EARLY_HARVEST_PERIOD = 7 days; // First week penalty period
     
     // Enhanced Price management
     uint256 public baseFarmPrice = 5 * 10**14; // 0.0005 USDT initial price
@@ -97,7 +100,9 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
         uint256 startTime;
         uint256 lastHarvestTime;
         uint256 totalHarvested;
+        uint256 farmTokensEarned; // Total FARM tokens earned but not yet transferred
         bool active;
+        bool completed;
     }
     
     struct ReferralData {
@@ -118,7 +123,7 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
     mapping(uint256 => FarmingPool) public farmingPools;
     mapping(address => mapping(uint256 => UserFarm)) public userFarms;
     mapping(address => uint256[]) public userFarmIds;
-    mapping(address => uint256) public userBalances;
+    mapping(address => uint256) public userBalances; // Game USDT balance
     mapping(address => ReferralData) public referralData;
     mapping(address => address[]) public userReferrals;
     mapping(address => UserStats) public userStats;
@@ -129,7 +134,8 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
     event Deposited(address indexed user, uint256 amount, uint256 fee, address indexed referrer);
     event Withdrawn(address indexed user, uint256 amount, uint256 fee);
     event FarmStarted(address indexed user, uint256 farmId, uint256 poolId, uint256 amount);
-    event Harvested(address indexed user, uint256 farmId, uint256 reward);
+    event Harvested(address indexed user, uint256 farmId, uint256 reward, uint256 penalty);
+    event FarmCompleted(address indexed user, uint256 farmId, uint256 totalFarmTokens);
     event TokensSwapped(address indexed user, uint256 farmAmount, uint256 usdtAmount, uint256 fee);
     event TokensBurned(uint256 amount);
     event ReferralEarned(address indexed referrer, address indexed referee, uint256 amount);
@@ -139,7 +145,21 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
     event WeeklyAirdrop(uint256 totalAmount, uint256 eligibleUsers, uint256 timestamp);
     event AirdropClaimed(address indexed user, uint256 amount);
     
+    modifier onlyInvested() {
+        require(userStats[msg.sender].hasInvested, "Must invest before using this function");
+        _;
+    }
+    
+    modifier validPool(uint256 poolId) {
+        require(poolId > 0 && poolId < nextPoolId, "Invalid pool ID");
+        require(farmingPools[poolId].active, "Pool not active");
+        _;
+    }
+    
     constructor(address _usdtToken, address _treasuryWallet) {
+        require(_usdtToken != address(0), "Invalid USDT address");
+        require(_treasuryWallet != address(0), "Invalid treasury address");
+        
         usdtToken = IERC20(_usdtToken);
         farmToken = new FarmToken();
         treasuryWallet = _treasuryWallet;
@@ -179,14 +199,16 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
         require(_referrer != msg.sender, "Cannot refer yourself");
         require(referralData[msg.sender].referrer == address(0), "Referrer already set");
         require(_referrer != address(0), "Invalid referrer address");
+        require(!userStats[msg.sender].hasInvested, "Cannot set referrer after investing");
         
         referralData[msg.sender].referrer = _referrer;
         referralData[_referrer].totalReferrals++;
         userReferrals[_referrer].push(msg.sender);
     }
     
-    function depositUSDT(uint256 amount) external nonReentrant {
+    function depositUSDT(uint256 amount) external nonReentrant whenNotPaused {
         require(amount > 0, "Amount must be greater than 0");
+        require(amount >= 10 * 10**18, "Minimum deposit is 10 USDT");
         require(usdtToken.transferFrom(msg.sender, address(this), amount), "Transfer failed");
         
         // Calculate fees
@@ -209,6 +231,7 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
         
         userBalances[msg.sender] = userBalances[msg.sender].add(netAmount);
         userStats[msg.sender].hasInvested = true;
+        userStats[msg.sender].totalInvested = userStats[msg.sender].totalInvested.add(amount);
         
         // Track weekly deposits for airdrop eligibility
         _updateWeeklyDeposits(msg.sender, amount);
@@ -248,8 +271,7 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
         lastWeeklyAirdrop = block.timestamp;
     }
     
-    function withdrawUSDT(uint256 amount) external nonReentrant {
-        require(userStats[msg.sender].hasInvested, "Must invest before withdrawing");
+    function withdrawUSDT(uint256 amount) external nonReentrant onlyInvested whenNotPaused {
         require(amount > WITHDRAWAL_FEE, "Amount must be greater than withdrawal fee");
         require(userBalances[msg.sender] >= amount, "Insufficient balance");
         
@@ -267,11 +289,10 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
         emit Withdrawn(msg.sender, amount, WITHDRAWAL_FEE);
     }
     
-    function startFarming(uint256 poolId, uint256 amount) external nonReentrant {
-        require(farmingPools[poolId].active, "Pool not active");
+    function startFarming(uint256 poolId, uint256 amount) external nonReentrant onlyInvested validPool(poolId) whenNotPaused {
         require(amount >= farmingPools[poolId].minDeposit, "Below minimum deposit");
         require(amount <= farmingPools[poolId].maxDeposit, "Above maximum deposit");
-        require(userBalances[msg.sender] >= amount, "Insufficient balance");
+        require(userBalances[msg.sender] >= amount, "Insufficient game balance");
         
         userBalances[msg.sender] = userBalances[msg.sender].sub(amount);
         totalUsdtInPools = totalUsdtInPools.add(amount);
@@ -284,11 +305,12 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
             startTime: block.timestamp,
             lastHarvestTime: block.timestamp,
             totalHarvested: 0,
-            active: true
+            farmTokensEarned: 0,
+            active: true,
+            completed: false
         });
         
         userFarmIds[msg.sender].push(farmId);
-        userStats[msg.sender].totalInvested = userStats[msg.sender].totalInvested.add(amount);
         userStats[msg.sender].activeFarms++;
         
         _updateFarmPrice();
@@ -296,44 +318,78 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
         emit FarmStarted(msg.sender, farmId, poolId, amount);
     }
     
-    function harvest(uint256 farmId) external nonReentrant {
+    function harvest(uint256 farmId) external nonReentrant whenNotPaused {
         UserFarm storage farm = userFarms[msg.sender][farmId];
         require(farm.active, "Farm not active");
+        require(!farm.completed, "Farm already completed");
         
         uint256 reward = calculateReward(msg.sender, farmId);
         require(reward > 0, "No reward available");
         
-        farm.lastHarvestTime = block.timestamp;
-        farm.totalHarvested = farm.totalHarvested.add(reward);
-        userStats[msg.sender].totalHarvested = userStats[msg.sender].totalHarvested.add(reward);
+        uint256 penalty = 0;
+        uint256 netReward = reward;
         
-        // Mint new FARM tokens for rewards
-        farmToken.mint(msg.sender, reward);
-        
-        // If farming period is complete, return principal and give completion bonus
-        if (block.timestamp >= farm.startTime.add(farmingPools[farm.poolId].duration.mul(1 days))) {
-            userBalances[msg.sender] = userBalances[msg.sender].add(farm.depositAmount);
-            totalUsdtInPools = totalUsdtInPools.sub(farm.depositAmount);
-            farmingPools[farm.poolId].totalDeposited = farmingPools[farm.poolId].totalDeposited.sub(farm.depositAmount);
-            farm.active = false;
-            userStats[msg.sender].activeFarms--;
+        // Check for early harvest penalty (first week)
+        if (block.timestamp < farm.startTime.add(EARLY_HARVEST_PERIOD)) {
+            penalty = reward.mul(EARLY_HARVEST_PENALTY).div(BASIS_POINTS);
+            netReward = reward.sub(penalty);
             
-            // Calculate and give completion bonus (percentage-based)
+            // Send penalty to treasury as USDT equivalent
             uint256 currentPrice = getCurrentFarmPrice();
-            uint256 bonusUsdtValue = farm.depositAmount.mul(farmingPools[farm.poolId].completionBonusPercentage).div(BASIS_POINTS);
-            uint256 bonusFarmTokens = bonusUsdtValue.mul(PRICE_MULTIPLIER).div(currentPrice);
-            
-            farmToken.mint(msg.sender, bonusFarmTokens);
-            
-            _updateFarmPrice();
+            uint256 penaltyUsdtValue = penalty.mul(currentPrice).div(PRICE_MULTIPLIER);
+            if (penaltyUsdtValue > 0 && usdtToken.balanceOf(address(this)) >= penaltyUsdtValue) {
+                usdtToken.transfer(treasuryWallet, penaltyUsdtValue);
+            }
         }
         
-        emit Harvested(msg.sender, farmId, reward);
+        farm.lastHarvestTime = block.timestamp;
+        farm.totalHarvested = farm.totalHarvested.add(netReward);
+        farm.farmTokensEarned = farm.farmTokensEarned.add(netReward);
+        userStats[msg.sender].totalHarvested = userStats[msg.sender].totalHarvested.add(netReward);
+        
+        // Check if farming period is complete
+        if (block.timestamp >= farm.startTime.add(farmingPools[farm.poolId].duration.mul(1 days))) {
+            _completeFarm(msg.sender, farmId);
+        }
+        
+        emit Harvested(msg.sender, farmId, netReward, penalty);
+    }
+    
+    function _completeFarm(address user, uint256 farmId) internal {
+        UserFarm storage farm = userFarms[user][farmId];
+        require(farm.active, "Farm not active");
+        require(!farm.completed, "Farm already completed");
+        
+        // Return principal to user balance
+        userBalances[user] = userBalances[user].add(farm.depositAmount);
+        totalUsdtInPools = totalUsdtInPools.sub(farm.depositAmount);
+        farmingPools[farm.poolId].totalDeposited = farmingPools[farm.poolId].totalDeposited.sub(farm.depositAmount);
+        
+        // Calculate and add completion bonus
+        uint256 currentPrice = getCurrentFarmPrice();
+        uint256 bonusUsdtValue = farm.depositAmount.mul(farmingPools[farm.poolId].completionBonusPercentage).div(BASIS_POINTS);
+        uint256 bonusFarmTokens = bonusUsdtValue.mul(PRICE_MULTIPLIER).div(currentPrice);
+        
+        farm.farmTokensEarned = farm.farmTokensEarned.add(bonusFarmTokens);
+        
+        // Transfer all earned FARM tokens to user
+        uint256 totalFarmTokens = farm.farmTokensEarned;
+        farmToken.mint(user, totalFarmTokens);
+        
+        // Mark farm as completed and inactive
+        farm.active = false;
+        farm.completed = true;
+        farm.farmTokensEarned = 0; // Reset to 0 as tokens are now transferred
+        userStats[user].activeFarms--;
+        
+        _updateFarmPrice();
+        
+        emit FarmCompleted(user, farmId, totalFarmTokens);
     }
     
     function calculateReward(address user, uint256 farmId) public view returns (uint256) {
         UserFarm memory farm = userFarms[user][farmId];
-        if (!farm.active) return 0;
+        if (!farm.active || farm.completed) return 0;
         
         FarmingPool memory pool = farmingPools[farm.poolId];
         uint256 timeElapsed = block.timestamp.sub(farm.lastHarvestTime);
@@ -349,7 +405,7 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
         return userDailyReward.mul(daysElapsed);
     }
     
-    function swapFarmToUSDT(uint256 farmAmount) external nonReentrant {
+    function swapFarmToUSDT(uint256 farmAmount) external nonReentrant whenNotPaused {
         require(farmAmount > 0, "Amount must be greater than 0");
         require(farmToken.balanceOf(msg.sender) >= farmAmount, "Insufficient FARM balance");
         
@@ -370,7 +426,7 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
         // Send swap fee to treasury
         require(usdtToken.transfer(treasuryWallet, swapFee), "Fee transfer failed");
         
-        // Add net amount to user's balance
+        // Add net amount to user's game balance
         userBalances[msg.sender] = userBalances[msg.sender].add(netUsdtAmount);
         
         // Update volume and price
@@ -381,7 +437,7 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
         emit TokensBurned(farmAmount);
     }
     
-    function processWeeklyAirdrop() external {
+    function processWeeklyAirdrop() external whenNotPaused {
         require(block.timestamp >= lastWeeklyAirdrop.add(7 days), "Weekly airdrop not ready");
         require(airdropEligibleUsers.length > 0, "No eligible users");
         require(weeklyDepositTotal > 0, "No deposits this week");
@@ -406,7 +462,7 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
         _resetWeeklyTracking();
     }
     
-    function withdrawReferralEarnings() external nonReentrant {
+    function withdrawReferralEarnings() external nonReentrant whenNotPaused {
         uint256 amount = referralData[msg.sender].availableEarnings;
         require(amount > 0, "No referral earnings available");
         
@@ -428,19 +484,13 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
     function calculateFarmPrice() public view returns (uint256) {
         if (totalUsdtVolume == 0) return baseFarmPrice;
         
-        // Enhanced price calculation based on:
-        // 1. Total USDT in pools (liquidity)
-        // 2. Total volume (demand)
-        // 3. Circulating supply of FARM tokens
-        
-        uint256 liquidityFactor = totalUsdtInPools.mul(PRICE_MULTIPLIER).div(1_000_000 * 10**18); // Per 1M USDT
-        uint256 volumeFactor = totalUsdtVolume.mul(priceImpactFactor).div(100_000 * 10**18); // Per 100k USDT volume
+        uint256 liquidityFactor = totalUsdtInPools.mul(PRICE_MULTIPLIER).div(1_000_000 * 10**18);
+        uint256 volumeFactor = totalUsdtVolume.mul(priceImpactFactor).div(100_000 * 10**18);
         
         uint256 circulatingSupply = farmToken.totalSupply().sub(farmToken.balanceOf(address(this)));
         uint256 supplyFactor = circulatingSupply > 0 ? 
             (10_000_000 * 10**18).mul(PRICE_MULTIPLIER).div(circulatingSupply) : PRICE_MULTIPLIER;
         
-        // Price = basePrice * (1 + liquidityFactor * 0.5) * (1 + volumeFactor * 0.3) * supplyFactor
         uint256 priceMultiplier = PRICE_MULTIPLIER
             .add(liquidityFactor.mul(5).div(10))
             .add(volumeFactor.mul(3).div(10));
@@ -453,7 +503,7 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
         return calculateFarmPrice();
     }
     
-    function distributeDailyTokens() external {
+    function distributeDailyTokens() external whenNotPaused {
         require(block.timestamp >= lastDistributionTime.add(1 days), "Daily distribution already done");
         
         uint256 tokensToMint = DAILY_FARM_DISTRIBUTION;
@@ -478,6 +528,8 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
         bool active,
         uint256 pendingReward,
         uint256 totalHarvested,
+        uint256 farmTokensEarned,
+        bool completed,
         uint256 completionBonusPercentage
     ) {
         UserFarm memory farm = userFarms[user][farmId];
@@ -489,6 +541,8 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
             farm.active,
             calculateReward(user, farmId),
             farm.totalHarvested,
+            farm.farmTokensEarned,
+            farm.completed,
             farmingPools[farm.poolId].completionBonusPercentage
         );
     }
@@ -596,7 +650,7 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
     }
     
     function updatePriceImpactFactor(uint256 _priceImpactFactor) external onlyOwner {
-        require(_priceImpactFactor <= 5000, "Price impact factor too high"); // Max 50%
+        require(_priceImpactFactor <= 5000, "Price impact factor too high");
         priceImpactFactor = _priceImpactFactor;
     }
     
@@ -607,27 +661,21 @@ contract EnhancedFarmingGame is ReentrancyGuard, Ownable {
     
     function updatePoolCompletionBonus(uint256 poolId, uint256 completionBonusPercentage) external onlyOwner {
         require(poolId > 0 && poolId < nextPoolId, "Invalid pool ID");
-        require(completionBonusPercentage <= 5000, "Bonus too high"); // Max 50%
+        require(completionBonusPercentage <= 5000, "Bonus too high");
         farmingPools[poolId].completionBonusPercentage = completionBonusPercentage;
+    }
+    
+    function pause() external onlyOwner {
+        _pause();
+    }
+    
+    function unpause() external onlyOwner {
+        _unpause();
     }
     
     function emergencyWithdraw() external onlyOwner {
         uint256 balance = usdtToken.balanceOf(address(this));
         require(usdtToken.transfer(owner(), balance), "Transfer failed");
-    }
-    
-    function emergencyPause() external onlyOwner {
-        // Pause all pools
-        for (uint256 i = 1; i < nextPoolId; i++) {
-            farmingPools[i].active = false;
-        }
-    }
-    
-    function emergencyUnpause() external onlyOwner {
-        // Unpause all pools
-        for (uint256 i = 1; i < nextPoolId; i++) {
-            farmingPools[i].active = true;
-        }
     }
     
     function rescueTokens(address token, uint256 amount) external onlyOwner {
