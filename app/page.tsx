@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Wallet, Coins, Sprout, ArrowUpDown, TrendingUp, Users } from "lucide-react"
+import { Wallet, Coins, Sprout, ArrowUpDown, TrendingUp, Users, Gift } from "lucide-react"
 import WalletConnection from "./components/wallet-connection"
 import FarmingPools from "./components/farming-pools"
 import TokenSwap from "./components/token-swap"
@@ -12,6 +12,7 @@ import GameStats from "./components/game-stats"
 import WelcomePage from "./components/welcome-page"
 import ContractStatus from "./components/contract-status"
 import ReferralSystem from "./components/referral-system"
+import WeeklyAirdrop from "./components/weekly-airdrop"
 import { useWallet } from "./hooks/use-wallet"
 import { useGameData } from "./hooks/use-game-data"
 
@@ -78,7 +79,7 @@ export default function FarmingGame() {
 
         {/* Main Game Interface */}
         <Tabs defaultValue="farming" className="mt-4 sm:mt-6">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto">
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 h-auto">
             <TabsTrigger value="farming" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm p-2 sm:p-3">
               <Sprout className="w-3 h-3 sm:w-4 sm:h-4" />
               <span>Farm</span>
@@ -91,6 +92,11 @@ export default function FarmingGame() {
               <Coins className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">Deposit</span>
               <span className="sm:hidden">Wallet</span>
+            </TabsTrigger>
+            <TabsTrigger value="airdrop" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm p-2 sm:p-3">
+              <Gift className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Airdrop</span>
+              <span className="sm:hidden">Air</span>
             </TabsTrigger>
             <TabsTrigger value="referral" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm p-2 sm:p-3">
               <Users className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -113,6 +119,10 @@ export default function FarmingGame() {
 
           <TabsContent value="deposit" className="mt-4 sm:mt-6">
             <DepositWithdraw />
+          </TabsContent>
+
+          <TabsContent value="airdrop" className="mt-4 sm:mt-6">
+            <WeeklyAirdrop />
           </TabsContent>
 
           <TabsContent value="referral" className="mt-4 sm:mt-6">

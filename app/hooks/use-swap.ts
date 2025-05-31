@@ -1,42 +1,85 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useWallet } from "./use-wallet"
 import { FarmingContract } from "../contracts/farming-contract"
 
 export function useSwap() {
   const { address, web3 } = useWallet()
   const [loading, setLoading] = useState(false)
+  const [farmTokenBalance, setFarmTokenBalance] = useState(0)
+  const [currentPrice, setCurrentPrice] = useState(0)
+  const [contractStats, setContractStats] = useState({
+    circulatingFarmSupply: 0,
+    totalBurned: 0,
+    totalUsdtVolume: 0,
+  })
 
-  // Mock exchange rates - these would come from the smart contract
-  const exchangeRates = {
-    "USDT-FARM": 1.25, // 1 USDT = 1.25 FARM
-    "FARM-USDT": 0.8, // 1 FARM = 0.8 USDT
+  useEffect(() => {
+    if (address && web3) {
+      loadSwapData()
+    }
+  }, [address, web3])
+
+  const loadSwapData = async () => {
+    if (!address || !web3) return
+
+    try {
+      const contract = new FarmingContract(web3)
+      const isDeployed = await contract.isContractDeployed()
+
+      if (!isDeployed) {
+        setFarmTokenBalance(0)
+        setCurrentPrice(0.0005) // Default price
+        setContractStats({
+          circulatingFarmSupply: 0,
+          totalBurned: 0,
+          totalUsdtVolume: 0,
+        })
+        return
+      }
+
+      const [farmBalance, price, stats] = await Promise.all([
+        contract.getFarmTokenBalance(address),
+        contract.getCurrentFarmPrice(),
+        contract.getContractStats(),
+      ])
+
+      setFarmTokenBalance(Number.parseFloat(farmBalance))
+      setCurrentPrice(Number.parseFloat(price))
+      setContractStats({
+        circulatingFarmSupply: Number.parseFloat(web3.utils.fromWei(stats.circulatingFarmSupply, "ether")),
+        totalBurned: Number.parseFloat(web3.utils.fromWei(stats.totalBurned, "ether")),
+        totalUsdtVolume: Number.parseFloat(web3.utils.fromWei(stats.totalUsdtVolume, "ether")),
+      })
+    } catch (error) {
+      console.error("Error loading swap data:", error)
+      setFarmTokenBalance(0)
+      setCurrentPrice(0.0005)
+      setContractStats({
+        circulatingFarmSupply: 0,
+        totalBurned: 0,
+        totalUsdtVolume: 0,
+      })
+    }
   }
 
-  const getSwapRate = (fromToken: "USDT" | "FARM", toToken: "USDT" | "FARM") => {
-    if (fromToken === toToken) return 1
-    return exchangeRates[`${fromToken}-${toToken}` as keyof typeof exchangeRates] || 1
+  const getCurrentPrice = () => {
+    return currentPrice
   }
 
-  const swapTokens = async (fromToken: "USDT" | "FARM", toToken: "USDT" | "FARM", amount: number) => {
+  const swapTokens = async (farmAmount: number) => {
     if (!address || !web3) return
 
     setLoading(true)
     try {
       const contract = new FarmingContract(web3)
+      await contract.swapFarmToUSDT(farmAmount, address)
 
-      if (fromToken === "FARM" && toToken === "USDT") {
-        await contract.swapFarmToUSDT(amount, address)
-      } else if (fromToken === "USDT" && toToken === "FARM") {
-        // This would be implemented in the contract if needed
-        console.log(`Swapping ${amount} USDT to FARM`)
-      }
+      // Refresh data after swap
+      await loadSwapData()
 
-      const rate = getSwapRate(fromToken, toToken)
-      const outputAmount = amount * rate
-
-      console.log(`Swapped ${amount} ${fromToken} for ${outputAmount} ${toToken}`)
+      console.log(`Swapped ${farmAmount} FARM tokens for USDT`)
     } catch (error) {
       console.error("Error swapping tokens:", error)
     } finally {
@@ -46,7 +89,10 @@ export function useSwap() {
 
   return {
     swapTokens,
-    getSwapRate,
+    getCurrentPrice,
     loading,
+    farmTokenBalance,
+    contractStats,
+    refreshData: loadSwapData,
   }
 }

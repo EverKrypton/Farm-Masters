@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { Sprout, Clock, Coins, Droplets } from "lucide-react"
+import { Sprout, Clock, Coins, Droplets, Gift, TrendingUp } from "lucide-react"
 import { useFarming } from "../hooks/use-farming"
 
 const FARMING_POOLS = [
@@ -19,6 +19,7 @@ const FARMING_POOLS = [
     maxDeposit: 500,
     dailyReward: "1%",
     duration: 7,
+    completionBonus: "5%",
     icon: "🌱",
     rarity: "Common",
   },
@@ -30,6 +31,7 @@ const FARMING_POOLS = [
     maxDeposit: 1000,
     dailyReward: "1.5%",
     duration: 10,
+    completionBonus: "8%",
     icon: "🌾",
     rarity: "Uncommon",
   },
@@ -41,6 +43,7 @@ const FARMING_POOLS = [
     maxDeposit: 5000,
     dailyReward: "2%",
     duration: 14,
+    completionBonus: "12%",
     icon: "🌽",
     rarity: "Rare",
   },
@@ -52,13 +55,14 @@ const FARMING_POOLS = [
     maxDeposit: 50000,
     dailyReward: "3%",
     duration: 21,
+    completionBonus: "18%",
     icon: "🌺",
     rarity: "Legendary",
   },
 ]
 
 export default function FarmingPools() {
-  const { activeFarms, plantCrop, harvestCrop, loading } = useFarming()
+  const { activeFarms, plantCrop, harvestCrop, loading, currentFarmPrice } = useFarming()
   const [selectedPool, setSelectedPool] = useState<number | null>(null)
   const [depositAmount, setDepositAmount] = useState("")
 
@@ -84,8 +88,37 @@ export default function FarmingPools() {
     }
   }
 
+  const calculateCompletionBonus = (depositAmount: number, bonusPercentage: string) => {
+    const bonus = (depositAmount * Number.parseFloat(bonusPercentage)) / 100
+    const farmTokens = bonus / currentFarmPrice
+    return farmTokens
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Current FARM Price Display */}
+      <Card className="bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-yellow-800">Current FARM Token Price</h3>
+                <p className="text-sm text-yellow-600">Live market price</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-yellow-700">
+                ${currentFarmPrice > 0 ? currentFarmPrice.toFixed(6) : "0.000500"} USDT
+              </div>
+              <div className="text-sm text-yellow-600">per FARM token</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {activeFarms.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -113,7 +146,7 @@ export default function FarmingPools() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Growth Progress</span>
-                      <span>{farm.progress}%</span>
+                      <span>{farm.progress.toFixed(1)}%</span>
                     </div>
                     <Progress value={farm.progress} className="h-2" />
                   </div>
@@ -125,15 +158,31 @@ export default function FarmingPools() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Coins className="w-4 h-4 text-yellow-500" />
-                      <span>{farm.expectedReward} FARM</span>
+                      <span>{farm.expectedReward.toFixed(2)} FARM</span>
                     </div>
                   </div>
 
-                  {farm.progress >= 100 && (
+                  <div className="bg-purple-50 p-2 rounded-lg">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Gift className="w-3 h-3 text-purple-600" />
+                      <span className="text-xs font-medium text-purple-800">Completion Bonus</span>
+                    </div>
+                    <div className="text-xs text-purple-700">
+                      {farm.completionBonus}% of deposit = {farm.completionBonusFarmTokens.toFixed(0)} FARM tokens
+                    </div>
+                  </div>
+
+                  {farm.expectedReward > 0 && (
                     <Button onClick={() => harvestCrop(farm.id)} disabled={loading} className="w-full">
                       <Sprout className="w-4 h-4 mr-2" />
-                      Harvest ({farm.expectedReward} FARM)
+                      Harvest ({farm.expectedReward.toFixed(2)} FARM)
                     </Button>
+                  )}
+
+                  {farm.progress >= 100 && farm.expectedReward === 0 && (
+                    <div className="text-center text-sm text-green-600 font-medium">
+                      ✅ Farm Completed! Bonus tokens claimed.
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -182,6 +231,15 @@ export default function FarmingPools() {
                   </div>
                 </div>
 
+                <div className="bg-purple-50 p-3 rounded-lg">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Gift className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm font-medium text-purple-800">Completion Bonus</span>
+                  </div>
+                  <div className="text-sm text-purple-700">{pool.completionBonus} of your deposit in FARM tokens</div>
+                  <div className="text-xs text-purple-600 mt-1">Calculated at current FARM price when completed</div>
+                </div>
+
                 {selectedPool === pool.id ? (
                   <div className="space-y-3">
                     <div>
@@ -195,6 +253,13 @@ export default function FarmingPools() {
                         min={pool.minDeposit}
                         max={pool.maxDeposit}
                       />
+                      {depositAmount && Number.parseFloat(depositAmount) > 0 && (
+                        <div className="text-xs text-purple-600 mt-1">
+                          Completion bonus: ~
+                          {calculateCompletionBonus(Number.parseFloat(depositAmount), pool.completionBonus).toFixed(0)}{" "}
+                          FARM tokens
+                        </div>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <Button

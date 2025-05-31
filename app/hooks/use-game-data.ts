@@ -10,6 +10,7 @@ export function useGameData() {
     totalHarvested: 0,
     activeFarms: 0,
     totalInvested: 0,
+    totalFarmTokensEarned: 0,
     dailyEarnings: 0,
     referralEarnings: 0,
   })
@@ -17,8 +18,11 @@ export function useGameData() {
   const [usdtBalance, setUsdtBalance] = useState(0)
   const [contractStats, setContractStats] = useState({
     totalUsdtInPools: 0,
+    totalUsdtVolume: 0,
     currentFarmPrice: 0,
     totalFarmSupply: 0,
+    circulatingFarmSupply: 0,
+    totalBurned: 0,
     dailyFarmDistribution: 0,
   })
   const [loading, setLoading] = useState(true)
@@ -42,6 +46,7 @@ export function useGameData() {
           totalHarvested: 0,
           activeFarms: 0,
           totalInvested: 0,
+          totalFarmTokensEarned: 0,
           dailyEarnings: 0,
           referralEarnings: 0,
         })
@@ -49,8 +54,11 @@ export function useGameData() {
         setUsdtBalance(0)
         setContractStats({
           totalUsdtInPools: 0,
-          currentFarmPrice: 0,
+          totalUsdtVolume: 0,
+          currentFarmPrice: 0.0005, // Default initial price
           totalFarmSupply: 0,
+          circulatingFarmSupply: 0,
+          totalBurned: 0,
           dailyFarmDistribution: 0,
         })
         setLoading(false)
@@ -66,6 +74,7 @@ export function useGameData() {
           totalHarvested: Number.parseFloat(web3.utils.fromWei(userStats.totalHarvested, "ether")),
           activeFarms: Number(userStats.activeFarms),
           totalInvested: Number.parseFloat(web3.utils.fromWei(userStats.totalInvested, "ether")),
+          totalFarmTokensEarned: Number.parseFloat(web3.utils.fromWei(userStats.totalFarmTokensEarned, "ether")),
           dailyEarnings: 0,
           referralEarnings: Number.parseFloat(web3.utils.fromWei(referralData.totalEarnings, "ether")),
         })
@@ -75,8 +84,11 @@ export function useGameData() {
 
         setContractStats({
           totalUsdtInPools: Number.parseFloat(web3.utils.fromWei(contractData.totalUsdtInPools, "ether")),
+          totalUsdtVolume: Number.parseFloat(web3.utils.fromWei(contractData.totalUsdtVolume, "ether")),
           currentFarmPrice: Number.parseFloat(web3.utils.fromWei(contractData.currentFarmPrice, "ether")),
           totalFarmSupply: Number.parseFloat(web3.utils.fromWei(contractData.totalFarmSupply, "ether")),
+          circulatingFarmSupply: Number.parseFloat(web3.utils.fromWei(contractData.circulatingFarmSupply, "ether")),
+          totalBurned: Number.parseFloat(web3.utils.fromWei(contractData.totalBurned, "ether")),
           dailyFarmDistribution: Number.parseFloat(web3.utils.fromWei(contractData.dailyFarmDistribution, "ether")),
         })
       } catch (error) {
@@ -85,6 +97,7 @@ export function useGameData() {
           totalHarvested: 0,
           activeFarms: 0,
           totalInvested: 0,
+          totalFarmTokensEarned: 0,
           dailyEarnings: 0,
           referralEarnings: 0,
         })
@@ -92,8 +105,11 @@ export function useGameData() {
         setUsdtBalance(0)
         setContractStats({
           totalUsdtInPools: 0,
-          currentFarmPrice: 0,
+          totalUsdtVolume: 0,
+          currentFarmPrice: 0.0005,
           totalFarmSupply: 0,
+          circulatingFarmSupply: 0,
+          totalBurned: 0,
           dailyFarmDistribution: 0,
         })
       }

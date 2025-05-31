@@ -58,6 +58,13 @@ export const FARMING_CONTRACT_ABI = [
     type: "function",
   },
   {
+    inputs: [],
+    name: "distributeDailyTokens",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
     inputs: [{ internalType: "address", name: "user", type: "address" }],
     name: "getUserFarms",
     outputs: [{ internalType: "uint256[]", name: "", type: "uint256[]" }],
@@ -73,6 +80,7 @@ export const FARMING_CONTRACT_ABI = [
     outputs: [
       { internalType: "uint256", name: "poolId", type: "uint256" },
       { internalType: "uint256", name: "depositAmount", type: "uint256" },
+      { internalType: "uint256", name: "farmTokensEarned", type: "uint256" },
       { internalType: "uint256", name: "startTime", type: "uint256" },
       { internalType: "uint256", name: "lastHarvestTime", type: "uint256" },
       { internalType: "bool", name: "active", type: "bool" },
@@ -101,6 +109,7 @@ export const FARMING_CONTRACT_ABI = [
       { internalType: "uint256", name: "totalInvested", type: "uint256" },
       { internalType: "uint256", name: "totalHarvested", type: "uint256" },
       { internalType: "uint256", name: "activeFarms", type: "uint256" },
+      { internalType: "uint256", name: "totalFarmTokensEarned", type: "uint256" },
       { internalType: "bool", name: "hasInvested", type: "bool" },
       { internalType: "uint256", name: "farmTokenBalance", type: "uint256" },
       { internalType: "uint256", name: "usdtBalance", type: "uint256" },
@@ -115,6 +124,7 @@ export const FARMING_CONTRACT_ABI = [
       { internalType: "uint256", name: "totalDeposited", type: "uint256" },
       { internalType: "uint256", name: "dailyRewardPercentage", type: "uint256" },
       { internalType: "uint256", name: "poolRewardPercentage", type: "uint256" },
+      { internalType: "uint256", name: "farmTokensPerUSDT", type: "uint256" },
       { internalType: "uint256", name: "minDeposit", type: "uint256" },
       { internalType: "uint256", name: "maxDeposit", type: "uint256" },
       { internalType: "uint256", name: "duration", type: "uint256" },
@@ -128,10 +138,12 @@ export const FARMING_CONTRACT_ABI = [
     name: "getContractStats",
     outputs: [
       { internalType: "uint256", name: "totalUsdtInPools", type: "uint256" },
+      { internalType: "uint256", name: "totalUsdtVolume", type: "uint256" },
       { internalType: "uint256", name: "currentFarmPrice", type: "uint256" },
       { internalType: "uint256", name: "totalFarmSupply", type: "uint256" },
+      { internalType: "uint256", name: "circulatingFarmSupply", type: "uint256" },
+      { internalType: "uint256", name: "totalBurned", type: "uint256" },
       { internalType: "uint256", name: "dailyFarmDistribution", type: "uint256" },
-      { internalType: "uint256", name: "totalUsers", type: "uint256" },
     ],
     stateMutability: "view",
     type: "function",
@@ -155,6 +167,58 @@ export const FARMING_CONTRACT_ABI = [
     name: "farmToken",
     outputs: [{ internalType: "address", name: "", type: "address" }],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "owner",
+    outputs: [{ internalType: "address", name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_treasuryWallet", type: "address" }],
+    name: "updateTreasuryWallet",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "_priceImpactFactor", type: "uint256" }],
+    name: "updatePriceImpactFactor",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "poolId", type: "uint256" },
+      { internalType: "bool", name: "active", type: "bool" },
+    ],
+    name: "updatePoolStatus",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "emergencyWithdraw",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "emergencyPause",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "emergencyUnpause",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
 ]
@@ -196,6 +260,20 @@ export const FARM_TOKEN_ABI = [
     name: "transferFrom",
     outputs: [{ internalType: "bool", name: "", type: "bool" }],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getCirculatingSupply",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getTotalBurned",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
     type: "function",
   },
 ]
@@ -252,6 +330,11 @@ export class FarmingContract {
     return await this.contract.methods.swapFarmToUSDT(amountWei).send({ from: userAddress })
   }
 
+  async distributeDailyTokens(userAddress: string) {
+    return await this.contract.methods.distributeDailyTokens().send({ from: userAddress })
+  }
+
+  // View functions
   async getUserFarms(userAddress: string) {
     return await this.contract.methods.getUserFarms(userAddress).call()
   }
@@ -306,5 +389,30 @@ export class FarmingContract {
       console.error("Error checking if contract is deployed:", error)
       return false
     }
+  }
+
+  // Owner functions
+  async updateTreasuryWallet(newTreasuryWallet: string, userAddress: string) {
+    return await this.contract.methods.updateTreasuryWallet(newTreasuryWallet).send({ from: userAddress })
+  }
+
+  async updatePriceImpactFactor(factor: number, userAddress: string) {
+    return await this.contract.methods.updatePriceImpactFactor(factor).send({ from: userAddress })
+  }
+
+  async updatePoolStatus(poolId: number, active: boolean, userAddress: string) {
+    return await this.contract.methods.updatePoolStatus(poolId, active).send({ from: userAddress })
+  }
+
+  async emergencyWithdraw(userAddress: string) {
+    return await this.contract.methods.emergencyWithdraw().send({ from: userAddress })
+  }
+
+  async emergencyPause(userAddress: string) {
+    return await this.contract.methods.emergencyPause().send({ from: userAddress })
+  }
+
+  async emergencyUnpause(userAddress: string) {
+    return await this.contract.methods.emergencyUnpause().send({ from: userAddress })
   }
 }

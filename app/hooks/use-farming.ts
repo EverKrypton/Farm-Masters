@@ -14,18 +14,41 @@ interface ActiveFarm {
   timeLeft: number
   expectedReward: number
   totalHarvested: number
+  completionBonus: string
+  completionBonusFarmTokens: number
 }
 
 export function useFarming() {
   const { address, web3 } = useWallet()
   const [activeFarms, setActiveFarms] = useState<ActiveFarm[]>([])
   const [loading, setLoading] = useState(false)
+  const [currentFarmPrice, setCurrentFarmPrice] = useState(0.0005)
 
   useEffect(() => {
     if (address && web3) {
       loadActiveFarms()
+      loadCurrentPrice()
     }
   }, [address, web3])
+
+  const loadCurrentPrice = async () => {
+    if (!web3) return
+
+    try {
+      const contract = new FarmingContract(web3)
+      const isDeployed = await contract.isContractDeployed()
+
+      if (isDeployed) {
+        const price = await contract.getCurrentFarmPrice()
+        setCurrentFarmPrice(Number.parseFloat(price))
+      } else {
+        setCurrentFarmPrice(0.0005) // Default price
+      }
+    } catch (error) {
+      console.error("Error loading current price:", error)
+      setCurrentFarmPrice(0.0005)
+    }
+  }
 
   const loadActiveFarms = async () => {
     if (!address || !web3) return
@@ -46,16 +69,23 @@ export function useFarming() {
           const farmDetails = await contract.getFarmDetails(address, farmId)
           const poolStats = await contract.getPoolStats(farmDetails.poolId)
 
+          const completionBonusPercentage = Number(poolStats.completionBonusPercentage) / 100
+          const depositAmount = Number.parseFloat(web3.utils.fromWei(farmDetails.depositAmount, "ether"))
+          const bonusUsdtValue = (depositAmount * completionBonusPercentage) / 100
+          const bonusFarmTokens = bonusUsdtValue / currentFarmPrice
+
           return {
             id: farmId,
             name: getFarmName(farmDetails.poolId),
             icon: getFarmIcon(farmDetails.poolId),
             rarity: getFarmRarity(farmDetails.poolId),
-            deposited: Number.parseFloat(web3.utils.fromWei(farmDetails.depositAmount, "ether")),
+            deposited: depositAmount,
             progress: calculateProgress(farmDetails.startTime, Number(poolStats.duration)),
             timeLeft: calculateTimeLeft(farmDetails.startTime, Number(poolStats.duration)),
             expectedReward: Number.parseFloat(web3.utils.fromWei(farmDetails.pendingReward, "ether")),
             totalHarvested: Number.parseFloat(web3.utils.fromWei(farmDetails.totalHarvested, "ether")),
+            completionBonus: `${completionBonusPercentage}%`,
+            completionBonusFarmTokens: bonusFarmTokens,
           }
         }),
       )
@@ -103,6 +133,7 @@ export function useFarming() {
       const contract = new FarmingContract(web3)
       await contract.startFarming(poolId, amount, address)
       await loadActiveFarms()
+      await loadCurrentPrice()
     } catch (error) {
       console.error("Error planting crop:", error)
     } finally {
@@ -118,6 +149,7 @@ export function useFarming() {
       const contract = new FarmingContract(web3)
       await contract.harvestFarm(farmId, address)
       await loadActiveFarms()
+      await loadCurrentPrice()
     } catch (error) {
       console.error("Error harvesting crop:", error)
     } finally {
@@ -128,6 +160,7 @@ export function useFarming() {
   return {
     activeFarms,
     loading,
+    currentFarmPrice,
     plantCrop,
     harvestCrop,
     refreshFarms: loadActiveFarms,
