@@ -2,20 +2,24 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { CardContent, CardHeader } from "@/components/ui/card"
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { useWeb3 } from "@/components/web3-provider"
 import { useServerGameLogic } from "@/hooks/use-server-game-logic"
 import { useSound } from "@/components/sound-manager"
 import { AnimatedCard } from "@/components/animated-card"
+import { BattleSystem } from "@/components/battle-system"
+import { ResourceManager } from "@/components/resource-manager"
 import { MobileNav } from "@/components/mobile-nav"
 import { GuildSystem } from "@/components/guild-system"
 import { ServerSwapSystem } from "@/components/server-swap-system"
+import { PVPSystem } from "@/components/pvp-system"
 import { StakingSystem } from "@/components/staking-system"
 import { ReferralSystem } from "@/components/referral-system"
 import AdminPanel from "@/components/admin-panel"
@@ -25,17 +29,21 @@ import {
   Wallet,
   Coins,
   Sword,
+  Shield,
+  Zap,
   Star,
   ShoppingCart,
   Plus,
   Gamepad2,
   Trophy,
   Users,
+  TrendingUp,
   Sparkles,
   Crown,
   Gem,
   Settings,
   Menu,
+  Heart,
   Volume2,
   VolumeX,
   BookOpen,
@@ -51,16 +59,103 @@ interface NFT {
   name: string
   rarity: "Common" | "Rare" | "Epic" | "Legendary"
   price: number
-  stats?: any
+  stats?: {
+    attack?: number
+    defense?: number
+    speed?: number
+    power?: number
+    health?: number
+  }
   type: "Character" | "Weapon" | "Land" | "Resource"
+  level?: number
+  experience?: number
   image_url: string
 }
+
+interface Resource {
+  id: string
+  name: string
+  amount: number
+  icon: string
+  harvestRate: number
+  lastHarvest: number
+}
+
+interface Quest {
+  id: string
+  name: string
+  description: string
+  progress: number
+  target: number
+  realmReward: number
+  completed: boolean
+}
+
+const mockResources: Resource[] = [
+  {
+    id: "1",
+    name: "Crystal Ore",
+    amount: 150,
+    icon: "💎",
+    harvestRate: 25,
+    lastHarvest: Date.now() - 1800000, // 30 minutes ago
+  },
+  {
+    id: "2",
+    name: "Ancient Wood",
+    amount: 89,
+    icon: "🌳",
+    harvestRate: 15,
+    lastHarvest: Date.now() - 2700000, // 45 minutes ago
+  },
+  {
+    id: "3",
+    name: "Mystic Herbs",
+    amount: 67,
+    icon: "🌿",
+    harvestRate: 20,
+    lastHarvest: Date.now() - 1200000, // 20 minutes ago
+  },
+]
+
+const mockQuests: Quest[] = [
+  {
+    id: "1",
+    name: "Dragon Slayer",
+    description: "Defeat 5 Fire Dragons in battle",
+    progress: 3,
+    target: 5,
+    realmReward: 500,
+    completed: false,
+  },
+  {
+    id: "2",
+    name: "Resource Gatherer",
+    description: "Harvest resources 10 times",
+    progress: 7,
+    target: 10,
+    realmReward: 200,
+    completed: false,
+  },
+  {
+    id: "3",
+    name: "Guild Master",
+    description: "Join or create a guild",
+    progress: 0,
+    target: 1,
+    realmReward: 1000,
+    completed: false,
+  },
+]
 
 export default function NFTGame() {
   const [activeTab, setActiveTab] = useState("marketplace")
   const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isBattling, setIsBattling] = useState(false)
+  const [resources, setResources] = useState<Resource[]>(mockResources)
+  const [activeQuests, setActiveQuests] = useState<Quest[]>(mockQuests)
 
   const { toast } = useToast()
   const { account, isConnected, balance, connectWallet, mintNFT, buyNFT, isAdmin } = useWeb3()
@@ -126,6 +221,45 @@ export default function NFTGame() {
   const handleTabChange = (tab: string) => {
     playSound("click")
     setActiveTab(tab)
+  }
+
+  const startBattle = () => {
+    setIsBattling(true)
+    playSound("battle")
+    setTimeout(() => {
+      setIsBattling(false)
+      playSound("victory")
+      toast({
+        title: "Battle Won!",
+        description: "You earned 50 REALM tokens and 100 XP!",
+      })
+    }, 3000)
+  }
+
+  const harvestResources = () => {
+    playSound("harvest")
+    setResources((prev) =>
+      prev.map((resource) => ({
+        ...resource,
+        amount: resource.amount + resource.harvestRate,
+        lastHarvest: Date.now(),
+      })),
+    )
+    toast({
+      title: "Resources Harvested!",
+      description: "You collected valuable resources!",
+    })
+  }
+
+  const completeQuest = (questId: string) => {
+    setActiveQuests((prev) => prev.map((quest) => (quest.id === questId ? { ...quest, completed: true } : quest)))
+    const quest = activeQuests.find((q) => q.id === questId)
+    if (quest) {
+      toast({
+        title: "Quest Completed!",
+        description: `You earned ${quest.realmReward} REALM tokens!`,
+      })
+    }
   }
 
   const getRarityColor = (rarity: string) => {
@@ -444,7 +578,9 @@ export default function NFTGame() {
                   <AnimatedCard
                     key={nft.id}
                     delay={index * 100}
-                    className="nft-card bg-black/40 border-white/10 hover:border-white/20 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/20"
+                    className={`nft-card bg-black/40 border-white/10 hover:border-white/20 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/20 ${
+                      index === 0 ? "ring-2 ring-blue-500/50" : ""
+                    }`}
                   >
                     <CardHeader className="pb-2">
                       <div className="relative group">
@@ -461,6 +597,11 @@ export default function NFTGame() {
                         <div className="absolute top-2 left-2 bg-black/60 rounded-full p-1 animate-bounce backdrop-blur-sm">
                           {getTypeIcon(nft.type)}
                         </div>
+                        {nft.level && (
+                          <div className="absolute bottom-2 left-2 bg-gradient-to-r from-blue-600/80 to-purple-600/80 rounded-full px-2 py-1 text-xs text-white font-bold backdrop-blur-sm">
+                            Lv.{nft.level}
+                          </div>
+                        )}
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -468,6 +609,45 @@ export default function NFTGame() {
                         <h3 className="font-bold text-white text-sm md:text-lg">{nft.name}</h3>
                         <p className="text-gray-400 text-xs md:text-sm">{nft.type}</p>
                       </div>
+
+                      {nft.experience && (
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs text-gray-400">
+                            <span>Experience</span>
+                            <span>{nft.experience}/1000</span>
+                          </div>
+                          <Progress value={(nft.experience / 1000) * 100} className="h-1" />
+                        </div>
+                      )}
+
+                      {nft.stats && (
+                        <div className="grid grid-cols-2 gap-1 md:gap-2 text-xs md:text-sm">
+                          {nft.stats.attack && (
+                            <div className="flex items-center gap-1 text-red-400">
+                              <Sword className="w-3 h-3" />
+                              <span>{nft.stats.attack}</span>
+                            </div>
+                          )}
+                          {nft.stats.defense && (
+                            <div className="flex items-center gap-1 text-blue-400">
+                              <Shield className="w-3 h-3" />
+                              <span>{nft.stats.defense}</span>
+                            </div>
+                          )}
+                          {nft.stats.speed && (
+                            <div className="flex items-center gap-1 text-green-400">
+                              <Zap className="w-3 h-3" />
+                              <span>{nft.stats.speed}</span>
+                            </div>
+                          )}
+                          {nft.stats.health && (
+                            <div className="flex items-center gap-1 text-pink-400">
+                              <Heart className="w-3 h-3" />
+                              <span>{nft.stats.health}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       <div className="flex items-center justify-between pt-2">
                         <div className="flex items-center gap-1">
@@ -488,6 +668,204 @@ export default function NFTGame() {
                 ))}
               </div>
             </div>
+          </TabsContent>
+
+          {/* Game Tab */}
+          <TabsContent value="game" className="mt-6">
+            <div className="grid gap-4 md:gap-6">
+              <motion.h2
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-2xl md:text-3xl font-bold text-white bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent"
+              >
+                Game Dashboard
+              </motion.h2>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+                {/* Player Stats */}
+                <AnimatedCard
+                  className="bg-black/40 border-white/10 hover:border-green-500/30 transition-all duration-300"
+                  delay={0}
+                >
+                  <CardHeader>
+                    <CardTitle className="text-white flex items-center gap-2 text-sm md:text-base">
+                      <motion.div
+                        animate={{ rotate: [0, 10, -10, 0] }}
+                        transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+                      >
+                        <Trophy className="w-4 md:w-5 h-4 md:h-5 text-yellow-400" />
+                      </motion.div>
+                      Player Stats
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 md:space-y-4">
+                    {playerStats && (
+                      <>
+                        <div className="flex justify-between text-white text-sm md:text-base">
+                          <span>Level</span>
+                          <span className="font-bold text-yellow-400">{playerStats.level}</span>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-white text-sm">
+                            <span>Experience</span>
+                            <span className="font-bold">
+                              {playerStats.experience} / {playerStats.level * 1000}
+                            </span>
+                          </div>
+                          <Progress
+                            value={(playerStats.experience / (playerStats.level * 1000)) * 100}
+                            className="h-2"
+                          />
+                        </div>
+                        <div className="flex justify-between text-white text-sm md:text-base">
+                          <span>Battles Won</span>
+                          <span className="font-bold text-green-400">{playerStats.battles_won}</span>
+                        </div>
+                        <div className="flex justify-between text-white text-sm md:text-base">
+                          <span>Energy</span>
+                          <span className="font-bold text-blue-400">{playerStats.energy}/100</span>
+                        </div>
+                        <div className="flex justify-between text-white text-sm md:text-base">
+                          <span>Health</span>
+                          <span className="font-bold text-red-400">{playerStats.health}/100</span>
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </AnimatedCard>
+
+                {/* Resources */}
+                <ResourceManager resources={resources} onHarvest={harvestResources} />
+
+                {/* Quick Actions */}
+                <AnimatedCard
+                  className="bg-black/40 border-white/10 hover:border-blue-500/30 transition-all duration-300"
+                  delay={400}
+                >
+                  <CardHeader>
+                    <CardTitle className="text-white flex items-center gap-2 text-sm md:text-base">
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
+                      >
+                        <Gamepad2 className="w-4 md:w-5 h-4 md:h-5 text-green-400" />
+                      </motion.div>
+                      Quick Actions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 md:space-y-3">
+                    <Button
+                      className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 hover:scale-105 transition-all duration-300 text-sm shadow-lg shadow-red-500/25"
+                      onClick={() => {
+                        playSound("battle")
+                        startBattle()
+                      }}
+                      disabled={isBattling}
+                    >
+                      <Sword className="w-4 h-4 mr-2" />
+                      {isBattling ? "Battling..." : "Start Battle"}
+                    </Button>
+                    <Button
+                      className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 hover:scale-105 transition-all duration-300 text-sm shadow-lg shadow-green-500/25"
+                      onClick={() => {
+                        playSound("harvest")
+                        harvestResources()
+                      }}
+                    >
+                      <Gem className="w-4 h-4 mr-2" />
+                      Harvest Resources
+                    </Button>
+                    <Button className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 hover:scale-105 transition-all duration-300 text-sm shadow-lg shadow-purple-500/25">
+                      <Crown className="w-4 h-4 mr-2" />
+                      Explore Land
+                    </Button>
+                    <Button
+                      onClick={() => setActiveTab("guilds")}
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 hover:scale-105 transition-all duration-300 text-sm shadow-lg shadow-blue-500/25"
+                    >
+                      <Users className="w-4 h-4 mr-2" />
+                      Join Guild
+                    </Button>
+                  </CardContent>
+                </AnimatedCard>
+              </div>
+
+              {/* Active Quests */}
+              <AnimatedCard
+                className="bg-black/40 border-white/10 hover:border-purple-500/30 transition-all duration-300"
+                delay={600}
+              >
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+                    >
+                      <Sparkles className="w-5 h-5 text-purple-400" />
+                    </motion.div>
+                    Active Quests
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {activeQuests.map((quest, index) => (
+                    <motion.div
+                      key={quest.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="p-3 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-lg border border-blue-600/30 hover:border-blue-500/50 transition-all duration-300 backdrop-blur-sm"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex-1">
+                          <h4 className="text-white font-medium text-sm md:text-base">{quest.name}</h4>
+                          <p className="text-gray-400 text-xs md:text-sm">{quest.description}</p>
+                          <div className="flex justify-between mt-2">
+                            <span className="text-blue-400 text-xs md:text-sm">
+                              Progress: {quest.progress}/{quest.target}
+                            </span>
+                            <span className="text-yellow-400 text-xs md:text-sm">+{quest.realmReward} REALM</span>
+                          </div>
+                          <Progress value={(quest.progress / quest.target) * 100} className="h-1 mt-1" />
+                        </div>
+                        {quest.progress >= quest.target && !quest.completed && (
+                          <Button
+                            size="sm"
+                            className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-xs shadow-lg"
+                            onClick={() => {
+                              playSound("success")
+                              completeQuest(quest.id)
+                            }}
+                          >
+                            Complete
+                          </Button>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </CardContent>
+              </AnimatedCard>
+
+              {/* Battle System */}
+              <BattleSystem />
+            </div>
+          </TabsContent>
+
+          {/* PVP Tab */}
+          <TabsContent value="pvp" className="mt-6">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-2xl md:text-3xl font-bold text-white bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent mb-6"
+            >
+              Player vs Player
+            </motion.h2>
+            <PVPSystem
+              matches={availableBattles}
+              realmBalance={playerStats?.realm_balance || 0}
+              onCreateMatch={createPVPBattle}
+              onJoinMatch={joinPVPBattle}
+              currentPlayer={account || ""}
+            />
           </TabsContent>
 
           {/* Swap Tab */}
@@ -554,6 +932,74 @@ export default function NFTGame() {
           {/* Guilds Tab */}
           <TabsContent value="guilds" className="mt-6">
             <GuildSystem />
+          </TabsContent>
+
+          {/* Leaderboard Tab */}
+          <TabsContent value="leaderboard" className="mt-6">
+            <div className="grid gap-4 md:gap-6">
+              <motion.h2
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-2xl md:text-3xl font-bold text-white bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent"
+              >
+                Leaderboard
+              </motion.h2>
+
+              <AnimatedCard
+                className="bg-black/40 border-white/10 hover:border-yellow-500/30 transition-all duration-300"
+                delay={0}
+              >
+                <CardContent className="p-4 md:p-6">
+                  <div className="space-y-3 md:space-y-4">
+                    {[
+                      { rank: 1, name: "DragonSlayer", score: 15420, avatar: "🐉", earnings: "2,450 REALM" },
+                      { rank: 2, name: "CryptoKnight", score: 14890, avatar: "⚔️", earnings: "2,180 REALM" },
+                      { rank: 3, name: "MysticMage", score: 13750, avatar: "🔮", earnings: "1,950 REALM" },
+                      { rank: 4, name: "SunflowerFarm", score: 12340, avatar: "🌻", earnings: "1,720 REALM" },
+                      { rank: 5, name: "IceQueen", score: 11890, avatar: "❄️", earnings: "1,580 REALM" },
+                    ].map((player, index) => (
+                      <motion.div
+                        key={player.rank}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="flex items-center justify-between p-3 md:p-4 bg-gradient-to-r from-white/5 to-white/10 rounded-lg hover:from-white/10 hover:to-white/15 transition-all duration-300 backdrop-blur-sm"
+                      >
+                        <div className="flex items-center gap-3 md:gap-4">
+                          <div
+                            className={`w-6 md:w-8 h-6 md:h-8 rounded-full flex items-center justify-center text-white font-bold text-sm md:text-base shadow-lg ${
+                              player.rank === 1
+                                ? "bg-gradient-to-r from-yellow-500 to-yellow-600"
+                                : player.rank === 2
+                                  ? "bg-gradient-to-r from-gray-400 to-gray-500"
+                                  : player.rank === 3
+                                    ? "bg-gradient-to-r from-amber-600 to-amber-700"
+                                    : "bg-gradient-to-r from-blue-600 to-blue-700"
+                            }`}
+                          >
+                            {player.rank}
+                          </div>
+                          <div className="text-lg md:text-2xl">{player.avatar}</div>
+                          <div>
+                            <span className="text-white font-medium text-sm md:text-base">{player.name}</span>
+                            <div className="text-gray-400 text-xs">{player.earnings}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="w-3 md:w-4 h-3 md:h-4 text-green-400" />
+                            <span className="text-white font-bold text-sm md:text-base">
+                              {player.score.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="text-gray-400 text-xs">XP</div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </CardContent>
+              </AnimatedCard>
+            </div>
           </TabsContent>
 
           {/* Admin Tab */}
