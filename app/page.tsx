@@ -11,13 +11,17 @@ import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { useWeb3 } from "@/components/web3-provider"
-import { useGameLogic } from "@/hooks/use-game-logic"
+import { useRealGameLogic } from "@/hooks/use-real-game-logic"
 import { useSound } from "@/components/sound-manager"
 import { AnimatedCard } from "@/components/animated-card"
 import { BattleSystem } from "@/components/battle-system"
 import { ResourceManager } from "@/components/resource-manager"
 import { MobileNav } from "@/components/mobile-nav"
 import { GuildSystem } from "@/components/guild-system"
+import { SwapSystem } from "@/components/swap-system"
+import { PVPSystem } from "@/components/pvp-system"
+import { StakingSystem } from "@/components/staking-system"
+import { ReferralSystem } from "@/components/referral-system"
 import AdminPanel from "@/components/admin-panel"
 import { motion } from "framer-motion"
 import Link from "next/link"
@@ -43,6 +47,10 @@ import {
   Volume2,
   VolumeX,
   BookOpen,
+  ArrowUpDown,
+  Swords,
+  Lock,
+  Gift,
 } from "lucide-react"
 
 interface NFT {
@@ -116,8 +124,24 @@ export default function NFTGame() {
 
   const { toast } = useToast()
   const { account, isConnected, balance, connectWallet, mintNFT, buyNFT, isAdmin } = useWeb3()
-  const { playerStats, activeQuests, resources, startBattle, harvestResources, completeQuest, levelUpNFT } =
-    useGameLogic()
+  const {
+    playerStats,
+    activeQuests,
+    resources,
+    pvpMatches,
+    isBattling,
+    startBattle,
+    harvestResources,
+    completeQuest,
+    createPVPMatch,
+    joinPVPMatch,
+    swapUSDTToREALM,
+    swapREALMToUSDT,
+    stakeREALM,
+    unstakeREALM,
+    claimStakingRewards,
+    useReferralCode,
+  } = useRealGameLogic()
   const { playSound, toggleMute, isMuted } = useSound()
 
   const handleMintNFT = async (nftData: any) => {
@@ -287,12 +311,13 @@ export default function NFTGame() {
                   >
                     <Coins className="w-4 h-4 text-yellow-400" />
                   </motion.div>
-                  <span className="text-white font-medium text-sm md:text-base">{balance} ETH</span>
+                  <span className="text-white font-medium text-sm md:text-base">
+                    {playerStats.realmBalance.toFixed(0)} REALM
+                  </span>
                 </motion.div>
               )}
 
               <Button
-                data-tutorial="connect-wallet"
                 onClick={() => {
                   playSound("click")
                   connectWallet()
@@ -347,10 +372,9 @@ export default function NFTGame() {
       <main className="container mx-auto px-2 md:px-4 py-4 md:py-8 relative z-10">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           {/* Desktop Tabs */}
-          <TabsList className="hidden md:grid w-full grid-cols-5 bg-black/20 border border-white/10 mb-6 backdrop-blur-sm">
+          <TabsList className="hidden md:grid w-full grid-cols-8 bg-black/20 border border-white/10 mb-6 backdrop-blur-sm">
             <TabsTrigger
               value="marketplace"
-              data-tutorial="marketplace-tab"
               className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-700 transition-all duration-300 hover:bg-white/10"
             >
               <ShoppingCart className="w-4 h-4 mr-2" />
@@ -358,23 +382,41 @@ export default function NFTGame() {
             </TabsTrigger>
             <TabsTrigger
               value="game"
-              data-tutorial="game-tab"
               className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-600 data-[state=active]:to-green-700 transition-all duration-300 hover:bg-white/10"
             >
               <Gamepad2 className="w-4 h-4 mr-2" />
               Game
             </TabsTrigger>
             <TabsTrigger
-              value="inventory"
-              data-tutorial="inventory-tab"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-purple-700 transition-all duration-300 hover:bg-white/10"
+              value="pvp"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-600 data-[state=active]:to-red-700 transition-all duration-300 hover:bg-white/10"
             >
-              <Shield className="w-4 h-4 mr-2" />
-              Inventory
+              <Swords className="w-4 h-4 mr-2" />
+              PVP
+            </TabsTrigger>
+            <TabsTrigger
+              value="swap"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-orange-700 transition-all duration-300 hover:bg-white/10"
+            >
+              <ArrowUpDown className="w-4 h-4 mr-2" />
+              Swap
+            </TabsTrigger>
+            <TabsTrigger
+              value="staking"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-indigo-700 transition-all duration-300 hover:bg-white/10"
+            >
+              <Lock className="w-4 h-4 mr-2" />
+              Staking
+            </TabsTrigger>
+            <TabsTrigger
+              value="referral"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-600 data-[state=active]:to-teal-700 transition-all duration-300 hover:bg-white/10"
+            >
+              <Gift className="w-4 h-4 mr-2" />
+              Referral
             </TabsTrigger>
             <TabsTrigger
               value="guilds"
-              data-tutorial="guild-system"
               className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-600 data-[state=active]:to-pink-700 transition-all duration-300 hover:bg-white/10"
             >
               <Users className="w-4 h-4 mr-2" />
@@ -595,8 +637,8 @@ export default function NFTGame() {
                       <span className="font-bold text-green-400">{playerStats.battlesWon}</span>
                     </div>
                     <div className="flex justify-between text-white text-sm md:text-base">
-                      <span>NFTs Owned</span>
-                      <span className="font-bold text-purple-400">{playerStats.nftsOwned}</span>
+                      <span>Total Earnings</span>
+                      <span className="font-bold text-purple-400">{playerStats.totalEarnings.toFixed(0)} REALM</span>
                     </div>
                   </CardContent>
                 </AnimatedCard>
@@ -622,7 +664,6 @@ export default function NFTGame() {
                   </CardHeader>
                   <CardContent className="space-y-2 md:space-y-3">
                     <Button
-                      data-tutorial="battle-button"
                       className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 hover:scale-105 transition-all duration-300 text-sm shadow-lg shadow-red-500/25"
                       onClick={() => {
                         playSound("battle")
@@ -633,7 +674,6 @@ export default function NFTGame() {
                       Start Battle
                     </Button>
                     <Button
-                      data-tutorial="harvest-button"
                       className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 hover:scale-105 transition-all duration-300 text-sm shadow-lg shadow-green-500/25"
                       onClick={() => {
                         playSound("harvest")
@@ -647,7 +687,10 @@ export default function NFTGame() {
                       <Crown className="w-4 h-4 mr-2" />
                       Explore Land
                     </Button>
-                    <Button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 hover:scale-105 transition-all duration-300 text-sm shadow-lg shadow-blue-500/25">
+                    <Button
+                      onClick={() => setActiveTab("guilds")}
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 hover:scale-105 transition-all duration-300 text-sm shadow-lg shadow-blue-500/25"
+                    >
                       <Users className="w-4 h-4 mr-2" />
                       Join Guild
                     </Button>
@@ -688,11 +731,11 @@ export default function NFTGame() {
                             <span className="text-blue-400 text-xs md:text-sm">
                               Progress: {quest.progress}/{quest.target}
                             </span>
-                            <span className="text-yellow-400 text-xs md:text-sm">+{quest.reward} XP</span>
+                            <span className="text-yellow-400 text-xs md:text-sm">+{quest.realmReward} REALM</span>
                           </div>
                           <Progress value={(quest.progress / quest.target) * 100} className="h-1 mt-1" />
                         </div>
-                        {quest.progress >= quest.target && (
+                        {quest.progress >= quest.target && !quest.completed && (
                           <Button
                             size="sm"
                             className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-xs shadow-lg"
@@ -715,53 +758,75 @@ export default function NFTGame() {
             </div>
           </TabsContent>
 
-          {/* Inventory Tab */}
-          <TabsContent value="inventory" className="mt-6">
-            <div className="grid gap-4 md:gap-6">
-              <motion.h2
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-2xl md:text-3xl font-bold text-white bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent"
-              >
-                My Inventory
-              </motion.h2>
+          {/* PVP Tab */}
+          <TabsContent value="pvp" className="mt-6">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-2xl md:text-3xl font-bold text-white bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent mb-6"
+            >
+              Player vs Player
+            </motion.h2>
+            <PVPSystem
+              matches={pvpMatches}
+              realmBalance={playerStats.realmBalance}
+              onCreateMatch={createPVPMatch}
+              onJoinMatch={joinPVPMatch}
+              currentPlayer={account || ""}
+            />
+          </TabsContent>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
-                {mockNFTs.slice(0, 8).map((nft, index) => (
-                  <AnimatedCard
-                    key={nft.id}
-                    className="bg-black/40 border-white/10 hover:scale-105 hover:border-purple-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20"
-                    delay={index * 50}
-                  >
-                    <CardContent className="p-2 md:p-4">
-                      <img
-                        src={nft.image || "/placeholder.svg"}
-                        alt={nft.name}
-                        className="w-full h-20 md:h-32 object-cover rounded-lg mb-2 md:mb-3"
-                      />
-                      <h4 className="text-white font-medium text-xs md:text-sm truncate">{nft.name}</h4>
-                      <Badge className={`mt-1 ${getRarityColor(nft.rarity)} text-white text-xs shadow-lg`}>
-                        {nft.rarity}
-                      </Badge>
-                      {nft.level && (
-                        <div className="mt-2">
-                          <Button
-                            size="sm"
-                            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-xs shadow-lg"
-                            onClick={() => {
-                              playSound("levelup")
-                              levelUpNFT(nft.id)
-                            }}
-                          >
-                            Level Up
-                          </Button>
-                        </div>
-                      )}
-                    </CardContent>
-                  </AnimatedCard>
-                ))}
-              </div>
-            </div>
+          {/* Swap Tab */}
+          <TabsContent value="swap" className="mt-6">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-2xl md:text-3xl font-bold text-white bg-gradient-to-r from-orange-400 to-yellow-400 bg-clip-text text-transparent mb-6"
+            >
+              Token Swap
+            </motion.h2>
+            <SwapSystem
+              realmBalance={playerStats.realmBalance}
+              usdtBalance={playerStats.usdtBalance}
+              onSwapUSDTToREALM={swapUSDTToREALM}
+              onSwapREALMToUSDT={swapREALMToUSDT}
+            />
+          </TabsContent>
+
+          {/* Staking Tab */}
+          <TabsContent value="staking" className="mt-6">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-2xl md:text-3xl font-bold text-white bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent mb-6"
+            >
+              REALM Staking
+            </motion.h2>
+            <StakingSystem
+              realmBalance={playerStats.realmBalance}
+              stakedAmount={playerStats.stakedAmount}
+              stakingRewards={playerStats.stakingRewards}
+              onStake={stakeREALM}
+              onUnstake={unstakeREALM}
+              onClaimRewards={claimStakingRewards}
+            />
+          </TabsContent>
+
+          {/* Referral Tab */}
+          <TabsContent value="referral" className="mt-6">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-2xl md:text-3xl font-bold text-white bg-gradient-to-r from-teal-400 to-green-400 bg-clip-text text-transparent mb-6"
+            >
+              Referral Program
+            </motion.h2>
+            <ReferralSystem
+              referralCode={playerStats.referralCode}
+              referredBy={playerStats.referredBy}
+              totalEarnings={playerStats.totalEarnings}
+              onUseReferralCode={useReferralCode}
+            />
           </TabsContent>
 
           {/* Guilds Tab */}
@@ -787,11 +852,11 @@ export default function NFTGame() {
                 <CardContent className="p-4 md:p-6">
                   <div className="space-y-3 md:space-y-4">
                     {[
-                      { rank: 1, name: "DragonSlayer", score: 15420, avatar: "🐉" },
-                      { rank: 2, name: "CryptoKnight", score: 14890, avatar: "⚔️" },
-                      { rank: 3, name: "MysticMage", score: 13750, avatar: "🔮" },
-                      { rank: 4, name: "SunflowerFarm", score: 12340, avatar: "🌻" },
-                      { rank: 5, name: "IceQueen", score: 11890, avatar: "❄️" },
+                      { rank: 1, name: "DragonSlayer", score: 15420, avatar: "🐉", earnings: "2,450 REALM" },
+                      { rank: 2, name: "CryptoKnight", score: 14890, avatar: "⚔️", earnings: "2,180 REALM" },
+                      { rank: 3, name: "MysticMage", score: 13750, avatar: "🔮", earnings: "1,950 REALM" },
+                      { rank: 4, name: "SunflowerFarm", score: 12340, avatar: "🌻", earnings: "1,720 REALM" },
+                      { rank: 5, name: "IceQueen", score: 11890, avatar: "❄️", earnings: "1,580 REALM" },
                     ].map((player, index) => (
                       <motion.div
                         key={player.rank}
@@ -815,13 +880,19 @@ export default function NFTGame() {
                             {player.rank}
                           </div>
                           <div className="text-lg md:text-2xl">{player.avatar}</div>
-                          <span className="text-white font-medium text-sm md:text-base">{player.name}</span>
+                          <div>
+                            <span className="text-white font-medium text-sm md:text-base">{player.name}</span>
+                            <div className="text-gray-400 text-xs">{player.earnings}</div>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="w-3 md:w-4 h-3 md:h-4 text-green-400" />
-                          <span className="text-white font-bold text-sm md:text-base">
-                            {player.score.toLocaleString()}
-                          </span>
+                        <div className="text-right">
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="w-3 md:w-4 h-3 md:h-4 text-green-400" />
+                            <span className="text-white font-bold text-sm md:text-base">
+                              {player.score.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="text-gray-400 text-xs">XP</div>
                         </div>
                       </motion.div>
                     ))}
@@ -838,7 +909,6 @@ export default function NFTGame() {
             </TabsContent>
           )}
         </Tabs>
-        {!isAdmin && activeTab === "admin" && setActiveTab("marketplace")}
       </main>
     </div>
   )

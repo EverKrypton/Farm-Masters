@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { ShoppingCart, Gamepad2, Shield, Trophy, Settings, X, Users } from "lucide-react"
+import { ShoppingCart, Gamepad2, Trophy, Settings, X, Users, ArrowUpDown, Swords, Lock, Gift } from "lucide-react"
 
 interface MobileNavProps {
   isOpen: boolean
@@ -16,7 +16,10 @@ export function MobileNav({ isOpen, onClose, activeTab, setActiveTab, isAdmin = 
   const navItems = [
     { id: "marketplace", label: "Marketplace", icon: ShoppingCart },
     { id: "game", label: "Game", icon: Gamepad2 },
-    { id: "inventory", label: "Inventory", icon: Shield },
+    { id: "pvp", label: "PVP", icon: Swords },
+    { id: "swap", label: "Swap", icon: ArrowUpDown },
+    { id: "staking", label: "Staking", icon: Lock },
+    { id: "referral", label: "Referral", icon: Gift },
     { id: "guilds", label: "Guilds", icon: Users },
     { id: "leaderboard", label: "Leaderboard", icon: Trophy },
     ...(isAdmin ? [{ id: "admin", label: "Admin", icon: Settings }] : []),
