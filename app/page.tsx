@@ -13,15 +13,14 @@ import { useToast } from "@/hooks/use-toast"
 import { useWeb3 } from "@/components/web3-provider"
 import { useGameLogic } from "@/hooks/use-game-logic"
 import { useSound } from "@/components/sound-manager"
-import { useTutorial } from "@/components/tutorial-system"
 import { AnimatedCard } from "@/components/animated-card"
 import { BattleSystem } from "@/components/battle-system"
 import { ResourceManager } from "@/components/resource-manager"
 import { MobileNav } from "@/components/mobile-nav"
 import { GuildSystem } from "@/components/guild-system"
-import { TutorialSystem } from "@/components/tutorial-system"
 import AdminPanel from "@/components/admin-panel"
 import { motion } from "framer-motion"
+import Link from "next/link"
 import {
   Wallet,
   Coins,
@@ -43,7 +42,7 @@ import {
   Heart,
   Volume2,
   VolumeX,
-  HelpCircle,
+  BookOpen,
 } from "lucide-react"
 
 interface NFT {
@@ -120,7 +119,6 @@ export default function NFTGame() {
   const { playerStats, activeQuests, resources, startBattle, harvestResources, completeQuest, levelUpNFT } =
     useGameLogic()
   const { playSound, toggleMute, isMuted } = useSound()
-  const { showTutorial, completeTutorial, skipTutorial, restartTutorial } = useTutorial()
 
   const handleMintNFT = async (nftData: any) => {
     setIsLoading(true)
@@ -243,9 +241,6 @@ export default function NFTGame() {
         />
       </div>
 
-      {/* Tutorial System */}
-      <TutorialSystem isActive={showTutorial} onComplete={completeTutorial} onSkip={skipTutorial} />
-
       {/* Mobile Navigation */}
       <MobileNav
         isOpen={isMobileMenuOpen}
@@ -326,17 +321,11 @@ export default function NFTGame() {
                 {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
               </Button>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  playSound("click")
-                  restartTutorial()
-                }}
-                className="text-white hover:bg-white/10 hidden md:flex"
-              >
-                <HelpCircle className="w-4 h-4" />
-              </Button>
+              <Link href="/docs">
+                <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 hidden md:flex">
+                  <BookOpen className="w-4 h-4" />
+                </Button>
+              </Link>
 
               <Button
                 variant="ghost"
