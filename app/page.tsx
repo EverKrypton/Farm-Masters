@@ -2,1013 +2,472 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Progress } from "@/components/ui/progress"
-import { useToast } from "@/hooks/use-toast"
-import { useWeb3 } from "@/components/web3-provider"
-import { useServerGameLogic } from "@/hooks/use-server-game-logic"
-import { useSound } from "@/components/sound-manager"
-import { AnimatedCard } from "@/components/animated-card"
-import { BattleSystem } from "@/components/battle-system"
-import { ResourceManager } from "@/components/resource-manager"
-import { MobileNav } from "@/components/mobile-nav"
-import { GuildSystem } from "@/components/guild-system"
-import { ServerSwapSystem } from "@/components/server-swap-system"
-import { PVPSystem } from "@/components/pvp-system"
-import { StakingSystem } from "@/components/staking-system"
-import { ReferralSystem } from "@/components/referral-system"
-import AdminPanel from "@/components/admin-panel"
-import { motion } from "framer-motion"
-import Link from "next/link"
+import { Card, CardContent } from "@/components/ui/card"
 import {
-  Wallet,
-  Coins,
-  Sword,
-  Shield,
-  Zap,
-  Star,
-  ShoppingCart,
-  Plus,
-  Gamepad2,
-  Trophy,
-  Users,
-  TrendingUp,
   Sparkles,
-  Crown,
-  Gem,
-  Settings,
-  Menu,
-  Heart,
-  Volume2,
-  VolumeX,
-  BookOpen,
-  ArrowUpDown,
-  Swords,
-  Lock,
-  Gift,
+  Wand2,
+  Code2,
+  Zap,
+  ArrowRight,
+  Upload,
+  FileImage,
+  AlertCircle,
+  Smartphone,
+  Globe,
+  Terminal,
 } from "lucide-react"
+import Header from "@/components/header"
+import CommunityShowcase from "@/components/community-showcase"
+import GenerationInterface from "@/components/generation-interface"
 
-interface NFT {
-  id: number
-  token_id: number
-  name: string
-  rarity: "Common" | "Rare" | "Epic" | "Legendary"
-  price: number
-  stats?: {
-    attack?: number
-    defense?: number
-    speed?: number
-    power?: number
-    health?: number
-  }
-  type: "Character" | "Weapon" | "Land" | "Resource"
-  level?: number
-  experience?: number
-  image_url: string
-}
+export default function HomePage() {
+  const [prompt, setPrompt] = useState("")
+  const [selectedModel, setSelectedModel] = useState("basic-free")
+  const [selectedLanguage, setSelectedLanguage] = useState("nextjs")
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generatedWebsite, setGeneratedWebsite] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
 
-interface Resource {
-  id: string
-  name: string
-  amount: number
-  icon: string
-  harvestRate: number
-  lastHarvest: number
-}
+  const modelOptions = [
+    {
+      value: "basic-free",
+      label: "🆓 Basic AI",
+      description: "Standard generation",
+      features: ["Basic templates", "Standard AI", "Free hosting", "NPX installation"],
+    },
+    {
+      value: "advanced-ai",
+      label: "🚀 Advanced AI",
+      description: "Enhanced generation",
+      features: ["Advanced templates", "Better AI", "Custom designs", "NPX installation"],
+    },
+    {
+      value: "pro-ai",
+      label: "👑 Pro AI",
+      description: "Professional grade",
+      features: ["Premium templates", "Best AI", "Complex layouts", "NPX installation"],
+    },
+  ]
 
-interface Quest {
-  id: string
-  name: string
-  description: string
-  progress: number
-  target: number
-  realmReward: number
-  completed: boolean
-}
+  const languageOptions = [
+    { value: "nextjs", label: "⚛️ Next.js", description: "React with SSR" },
+    { value: "react", label: "⚛️ React", description: "Single Page App" },
+    { value: "vue", label: "💚 Vue.js", description: "Progressive framework" },
+    { value: "angular", label: "🅰️ Angular", description: "Full framework" },
+    { value: "vanilla", label: "🌐 HTML/CSS/JS", description: "Pure web technologies" },
+    { value: "svelte", label: "🧡 Svelte", description: "Compile-time framework" },
+  ]
 
-const mockResources: Resource[] = [
-  {
-    id: "1",
-    name: "Crystal Ore",
-    amount: 150,
-    icon: "💎",
-    harvestRate: 25,
-    lastHarvest: Date.now() - 1800000, // 30 minutes ago
-  },
-  {
-    id: "2",
-    name: "Ancient Wood",
-    amount: 89,
-    icon: "🌳",
-    harvestRate: 15,
-    lastHarvest: Date.now() - 2700000, // 45 minutes ago
-  },
-  {
-    id: "3",
-    name: "Mystic Herbs",
-    amount: 67,
-    icon: "🌿",
-    harvestRate: 20,
-    lastHarvest: Date.now() - 1200000, // 20 minutes ago
-  },
-]
+  const selectedModelData = modelOptions.find((m) => m.value === selectedModel)
 
-const mockQuests: Quest[] = [
-  {
-    id: "1",
-    name: "Dragon Slayer",
-    description: "Defeat 5 Fire Dragons in battle",
-    progress: 3,
-    target: 5,
-    realmReward: 500,
-    completed: false,
-  },
-  {
-    id: "2",
-    name: "Resource Gatherer",
-    description: "Harvest resources 10 times",
-    progress: 7,
-    target: 10,
-    realmReward: 200,
-    completed: false,
-  },
-  {
-    id: "3",
-    name: "Guild Master",
-    description: "Join or create a guild",
-    progress: 0,
-    target: 1,
-    realmReward: 1000,
-    completed: false,
-  },
-]
+  const handleGenerate = async () => {
+    if (!prompt.trim()) return
 
-export default function NFTGame() {
-  const [activeTab, setActiveTab] = useState("marketplace")
-  const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isBattling, setIsBattling] = useState(false)
-  const [resources, setResources] = useState<Resource[]>(mockResources)
-  const [activeQuests, setActiveQuests] = useState<Quest[]>(mockQuests)
+    setIsGenerating(true)
+    setError(null)
 
-  const { toast } = useToast()
-  const { account, isConnected, balance, connectWallet, mintNFT, buyNFT, isAdmin } = useWeb3()
-  const {
-    playerStats,
-    marketData,
-    availableBattles,
-    userBattles,
-    marketplaceNFTs,
-    guilds,
-    userGuild,
-    dailyCheckin,
-    buyNFT: buyNFTWithREALM,
-    stakeREALM,
-    unstakeREALM,
-    claimStakingRewards,
-    createGuild,
-    joinGuild,
-    leaveGuild,
-    createPVPBattle,
-    joinPVPBattle,
-    swapUSDTToREALM,
-    swapREALMToUSDT,
-    useReferralCode,
-  } = useServerGameLogic()
-  const { playSound, toggleMute, isMuted } = useSound()
-
-  const handleMintNFT = async (nftData: any) => {
-    setIsLoading(true)
-    playSound("click")
     try {
-      await mintNFT(nftData)
-      playSound("mint")
-      toast({
-        title: "NFT Minted Successfully!",
-        description: "Your new NFT has been added to your inventory.",
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          model: selectedModel,
+          language: selectedLanguage,
+        }),
       })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success && data.website) {
+        setGeneratedWebsite(data.website)
+      } else {
+        throw new Error(data.error || "Generation failed")
+      }
     } catch (error) {
-      playSound("error")
-      toast({
-        title: "Minting Failed",
-        description: "There was an error minting your NFT.",
-        variant: "destructive",
-      })
+      console.error("Generation failed:", error)
+      setError(error instanceof Error ? error.message : "Generation failed")
     } finally {
-      setIsLoading(false)
+      setIsGenerating(false)
     }
   }
 
-  const handleBuyNFT = async (nft: NFT) => {
-    setIsLoading(true)
-    playSound("click")
-    try {
-      await buyNFTWithREALM(nft.id)
-      playSound("success")
-    } catch (error) {
-      playSound("error")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleTabChange = (tab: string) => {
-    playSound("click")
-    setActiveTab(tab)
-  }
-
-  const startBattle = () => {
-    setIsBattling(true)
-    playSound("battle")
-    setTimeout(() => {
-      setIsBattling(false)
-      playSound("victory")
-      toast({
-        title: "Battle Won!",
-        description: "You earned 50 REALM tokens and 100 XP!",
-      })
-    }, 3000)
-  }
-
-  const harvestResources = () => {
-    playSound("harvest")
-    setResources((prev) =>
-      prev.map((resource) => ({
-        ...resource,
-        amount: resource.amount + resource.harvestRate,
-        lastHarvest: Date.now(),
-      })),
+  if (isGenerating || generatedWebsite) {
+    return (
+      <GenerationInterface
+        prompt={prompt}
+        isGenerating={isGenerating}
+        generatedWebsite={generatedWebsite}
+        selectedModel={selectedModel}
+        selectedLanguage={selectedLanguage}
+        onBack={() => {
+          setGeneratedWebsite(null)
+          setIsGenerating(false)
+          setError(null)
+        }}
+        onNewGeneration={() => {
+          setGeneratedWebsite(null)
+          setPrompt("")
+          setError(null)
+        }}
+      />
     )
-    toast({
-      title: "Resources Harvested!",
-      description: "You collected valuable resources!",
-    })
-  }
-
-  const completeQuest = (questId: string) => {
-    setActiveQuests((prev) => prev.map((quest) => (quest.id === questId ? { ...quest, completed: true } : quest)))
-    const quest = activeQuests.find((q) => q.id === questId)
-    if (quest) {
-      toast({
-        title: "Quest Completed!",
-        description: `You earned ${quest.realmReward} REALM tokens!`,
-      })
-    }
-  }
-
-  const getRarityColor = (rarity: string) => {
-    switch (rarity) {
-      case "Common":
-        return "bg-gradient-to-r from-gray-500 to-gray-600"
-      case "Rare":
-        return "bg-gradient-to-r from-blue-500 to-blue-600"
-      case "Epic":
-        return "bg-gradient-to-r from-purple-500 to-purple-600"
-      case "Legendary":
-        return "bg-gradient-to-r from-yellow-500 to-orange-500"
-      default:
-        return "bg-gradient-to-r from-gray-500 to-gray-600"
-    }
-  }
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "Character":
-        return <Users className="w-4 h-4" />
-      case "Weapon":
-        return <Sword className="w-4 h-4" />
-      case "Land":
-        return <Crown className="w-4 h-4" />
-      case "Resource":
-        return <Gem className="w-4 h-4" />
-      default:
-        return <Star className="w-4 h-4" />
-    }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          animate={{
-            x: [0, 100, 0],
-            y: [0, -100, 0],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "linear",
-          }}
-          className="absolute top-10 left-10 w-32 h-32 bg-blue-500/10 rounded-full blur-xl"
-        />
-        <motion.div
-          animate={{
-            x: [0, -150, 0],
-            y: [0, 100, 0],
-          }}
-          transition={{
-            duration: 25,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "linear",
-          }}
-          className="absolute top-1/2 right-20 w-48 h-48 bg-purple-500/10 rounded-full blur-xl"
-        />
-        <motion.div
-          animate={{
-            x: [0, 80, 0],
-            y: [0, -80, 0],
-          }}
-          transition={{
-            duration: 15,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "linear",
-          }}
-          className="absolute bottom-20 left-1/3 w-24 h-24 bg-yellow-500/10 rounded-full blur-xl"
-        />
-      </div>
+    <div className="min-h-screen bg-gray-950 text-white">
+      <Header />
 
-      {/* Mobile Navigation */}
-      <MobileNav
-        isOpen={isMobileMenuOpen}
-        onClose={() => setIsMobileMenuOpen(false)}
-        activeTab={activeTab}
-        setActiveTab={handleTabChange}
-        isAdmin={isAdmin}
-      />
-
-      {/* Header */}
-      <header className="border-b border-white/10 bg-black/20 backdrop-blur-sm sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 8, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                >
-                  <Sparkles className="w-8 h-8 text-yellow-400" />
-                </motion.div>
-                <h1 className="text-xl md:text-2xl font-bold text-white bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  CryptoRealm
-                </h1>
-              </div>
-              <Badge
-                variant="secondary"
-                className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-yellow-400 border-yellow-500/30 animate-pulse"
-              >
-                BETA
-              </Badge>
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        {/* Free Badge */}
+        <div className="flex justify-center mb-8">
+          <div className="flex items-center gap-2 bg-gray-900 rounded-full p-1">
+            <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-green-500/20 text-green-400">
+              <Globe className="w-3 h-3" />
+              <span className="text-xs font-medium">100% Free</span>
             </div>
-
-            <div className="flex items-center gap-2 md:gap-4">
-              {isConnected && playerStats && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-lg px-3 py-2 border border-green-500/30"
-                >
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                  >
-                    <Coins className="w-4 h-4 text-yellow-400" />
-                  </motion.div>
-                  <span className="text-white font-medium text-sm md:text-base">
-                    {playerStats.realm_balance.toFixed(0)} REALM
-                  </span>
-                </motion.div>
-              )}
-
-              <Button
-                onClick={() => {
-                  playSound("click")
-                  connectWallet()
-                }}
-                className={`text-sm md:text-base transition-all duration-300 ${
-                  isConnected
-                    ? "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg shadow-green-500/25"
-                    : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg shadow-blue-500/25"
-                } hover:scale-105 hover:shadow-xl`}
-                disabled={isLoading}
-              >
-                <Wallet className="w-4 h-4 mr-1 md:mr-2" />
-                <span className="hidden sm:inline">{isConnected ? "Connected" : "Connect Wallet"}</span>
-                <span className="sm:hidden">{isConnected ? "✓" : "Connect"}</span>
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  playSound("click")
-                  toggleMute()
-                }}
-                className="text-white hover:bg-white/10 hidden md:flex"
-              >
-                {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-              </Button>
-
-              <Link href="/docs">
-                <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 hidden md:flex">
-                  <BookOpen className="w-4 h-4" />
-                </Button>
-              </Link>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="md:hidden text-white hover:bg-white/10"
-                onClick={() => {
-                  playSound("click")
-                  setIsMobileMenuOpen(true)
-                }}
-              >
-                <Menu className="w-5 h-5" />
-              </Button>
+            <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-blue-500/20 text-blue-400">
+              <Terminal className="w-3 h-3" />
+              <span className="text-xs font-medium">NPX Ready</span>
+            </div>
+            <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-purple-500/20 text-purple-400">
+              <Smartphone className="w-3 h-3" />
+              <span className="text-xs font-medium">Cross-Platform</span>
             </div>
           </div>
         </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-2 md:px-4 py-4 md:py-8 relative z-10">
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          {/* Desktop Tabs */}
-          <TabsList className="hidden md:grid w-full grid-cols-8 bg-black/20 border border-white/10 mb-6 backdrop-blur-sm">
-            <TabsTrigger
-              value="marketplace"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-700 transition-all duration-300 hover:bg-white/10"
-            >
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              Marketplace
-            </TabsTrigger>
-            <TabsTrigger
-              value="game"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-600 data-[state=active]:to-green-700 transition-all duration-300 hover:bg-white/10"
-            >
-              <Gamepad2 className="w-4 h-4 mr-2" />
-              Game
-            </TabsTrigger>
-            <TabsTrigger
-              value="pvp"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-600 data-[state=active]:to-red-700 transition-all duration-300 hover:bg-white/10"
-            >
-              <Swords className="w-4 h-4 mr-2" />
-              PVP
-            </TabsTrigger>
-            <TabsTrigger
-              value="swap"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-orange-700 transition-all duration-300 hover:bg-white/10"
-            >
-              <ArrowUpDown className="w-4 h-4 mr-2" />
-              Swap
-            </TabsTrigger>
-            <TabsTrigger
-              value="staking"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-indigo-700 transition-all duration-300 hover:bg-white/10"
-            >
-              <Lock className="w-4 h-4 mr-2" />
-              Staking
-            </TabsTrigger>
-            <TabsTrigger
-              value="referral"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-600 data-[state=active]:to-teal-700 transition-all duration-300 hover:bg-white/10"
-            >
-              <Gift className="w-4 h-4 mr-2" />
-              Referral
-            </TabsTrigger>
-            <TabsTrigger
-              value="guilds"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-600 data-[state=active]:to-pink-700 transition-all duration-300 hover:bg-white/10"
-            >
-              <Users className="w-4 h-4 mr-2" />
-              Guilds
-            </TabsTrigger>
-            <TabsTrigger
-              value="leaderboard"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-600 data-[state=active]:to-yellow-700 transition-all duration-300 hover:bg-white/10"
-            >
-              <Trophy className="w-4 h-4 mr-2" />
-              Leaderboard
-            </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger
-                value="admin"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-600 data-[state=active]:to-red-700 transition-all duration-300 hover:bg-white/10"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Admin
-              </TabsTrigger>
-            )}
-          </TabsList>
+        {/* Hero Section */}
+        <div className="text-center mb-12 sm:mb-16">
+          <div className="inline-flex items-center gap-2 bg-purple-500/10 text-purple-400 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm mb-6 sm:mb-8">
+            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Free AI Website Generator • NPX Installation • No Auth Required</span>
+            <span className="sm:hidden">Free AI Generator • NPX Ready</span>
+          </div>
 
-          {/* Marketplace Tab */}
-          <TabsContent value="marketplace" className="mt-6">
-            <div className="grid gap-4 md:gap-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-              >
-                <h2 className="text-2xl md:text-3xl font-bold text-white bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  NFT Marketplace
-                </h2>
-                <div className="flex gap-2">
+          <h1 className="text-3xl sm:text-5xl lg:text-7xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent leading-tight">
+            Generate & Install
+            <br />
+            <span className="text-white">Instantly</span>
+          </h1>
+
+          <p className="text-base sm:text-xl text-gray-300 mb-8 sm:mb-12 max-w-2xl mx-auto leading-relaxed px-4">
+            Create professional websites with AI and install them locally with a single NPX command. Works everywhere -
+            VS Code, Termux, Windows, macOS, Linux.
+          </p>
+
+          {/* Main Input - Mobile Optimized */}
+          <div className="max-w-4xl mx-auto mb-8 sm:mb-12">
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl sm:rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
+              <div className="relative">
+                <Input
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Describe your website... (e.g., 'Modern portfolio for a designer with dark theme')"
+                  className="w-full h-12 sm:h-16 bg-gray-900/90 border-gray-700 text-white placeholder-gray-400 pr-4 sm:pr-40 text-sm sm:text-lg rounded-xl backdrop-blur-sm"
+                  onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
+                />
+
+                {/* Desktop Controls */}
+                <div className="hidden sm:flex absolute right-3 top-3 items-center gap-3">
                   <Button
-                    onClick={dailyCheckin}
-                    className="bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 hover:scale-105 transition-all duration-300 shadow-lg shadow-yellow-500/25"
+                    onClick={handleGenerate}
+                    disabled={!prompt.trim() || isGenerating}
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 h-10 px-6"
                   >
-                    <Gift className="w-4 h-4 mr-2" />
-                    Daily Check-in
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    Generate & Install
                   </Button>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 hover:scale-105 transition-all duration-300 shadow-lg shadow-green-500/25">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Mint NFT
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="bg-gray-900 border-gray-700 mx-4 max-w-md backdrop-blur-sm">
-                      <DialogHeader>
-                        <DialogTitle className="text-white">Mint New NFT</DialogTitle>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="nft-name" className="text-white">
-                            NFT Name
-                          </Label>
-                          <Input
-                            id="nft-name"
-                            placeholder="Enter NFT name"
-                            className="bg-gray-800 border-gray-600 text-white focus:border-blue-500 transition-colors"
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="nft-description" className="text-white">
-                            Description
-                          </Label>
-                          <Input
-                            id="nft-description"
-                            placeholder="Enter description"
-                            className="bg-gray-800 border-gray-600 text-white focus:border-blue-500 transition-colors"
-                          />
-                        </div>
-                        <Button
-                          onClick={() => handleMintNFT({})}
-                          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 transition-all duration-300 shadow-lg"
-                          disabled={isLoading}
-                        >
-                          {isLoading ? "Minting..." : "Mint NFT (0.1 ETH)"}
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
                 </div>
-              </motion.div>
+              </div>
+            </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                {marketplaceNFTs.map((nft, index) => (
-                  <AnimatedCard
-                    key={nft.id}
-                    delay={index * 100}
-                    className={`nft-card bg-black/40 border-white/10 hover:border-white/20 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/20 ${
-                      index === 0 ? "ring-2 ring-blue-500/50" : ""
-                    }`}
+            {/* Mobile Controls */}
+            <div className="sm:hidden mt-4 space-y-3">
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="text-sm text-gray-400 mb-1 block">AI Model:</label>
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    className="w-full bg-gray-800 border-gray-600 text-white text-sm rounded-lg px-3 py-2"
                   >
-                    <CardHeader className="pb-2">
-                      <div className="relative group">
-                        <img
-                          src={nft.image_url || "/placeholder.svg"}
-                          alt={nft.name}
-                          className="w-full h-32 md:h-48 object-cover rounded-lg transition-transform duration-300 group-hover:scale-110"
-                        />
-                        <Badge
-                          className={`absolute top-2 right-2 ${getRarityColor(nft.rarity)} text-white animate-pulse shadow-lg`}
-                        >
-                          {nft.rarity}
-                        </Badge>
-                        <div className="absolute top-2 left-2 bg-black/60 rounded-full p-1 animate-bounce backdrop-blur-sm">
-                          {getTypeIcon(nft.type)}
-                        </div>
-                        {nft.level && (
-                          <div className="absolute bottom-2 left-2 bg-gradient-to-r from-blue-600/80 to-purple-600/80 rounded-full px-2 py-1 text-xs text-white font-bold backdrop-blur-sm">
-                            Lv.{nft.level}
-                          </div>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div>
-                        <h3 className="font-bold text-white text-sm md:text-lg">{nft.name}</h3>
-                        <p className="text-gray-400 text-xs md:text-sm">{nft.type}</p>
-                      </div>
-
-                      {nft.experience && (
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs text-gray-400">
-                            <span>Experience</span>
-                            <span>{nft.experience}/1000</span>
-                          </div>
-                          <Progress value={(nft.experience / 1000) * 100} className="h-1" />
-                        </div>
-                      )}
-
-                      {nft.stats && (
-                        <div className="grid grid-cols-2 gap-1 md:gap-2 text-xs md:text-sm">
-                          {nft.stats.attack && (
-                            <div className="flex items-center gap-1 text-red-400">
-                              <Sword className="w-3 h-3" />
-                              <span>{nft.stats.attack}</span>
-                            </div>
-                          )}
-                          {nft.stats.defense && (
-                            <div className="flex items-center gap-1 text-blue-400">
-                              <Shield className="w-3 h-3" />
-                              <span>{nft.stats.defense}</span>
-                            </div>
-                          )}
-                          {nft.stats.speed && (
-                            <div className="flex items-center gap-1 text-green-400">
-                              <Zap className="w-3 h-3" />
-                              <span>{nft.stats.speed}</span>
-                            </div>
-                          )}
-                          {nft.stats.health && (
-                            <div className="flex items-center gap-1 text-pink-400">
-                              <Heart className="w-3 h-3" />
-                              <span>{nft.stats.health}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between pt-2">
-                        <div className="flex items-center gap-1">
-                          <Coins className="w-3 md:w-4 h-3 md:h-4 text-yellow-400" />
-                          <span className="text-white font-bold text-sm md:text-base">{nft.price} REALM</span>
-                        </div>
-                        <Button
-                          onClick={() => handleBuyNFT(nft)}
-                          size="sm"
-                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 hover:scale-105 transition-all duration-300 text-xs md:text-sm shadow-lg"
-                          disabled={isLoading || !playerStats || playerStats.realm_balance < nft.price}
-                        >
-                          {isLoading ? "..." : "Buy"}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </AnimatedCard>
-                ))}
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* Game Tab */}
-          <TabsContent value="game" className="mt-6">
-            <div className="grid gap-4 md:gap-6">
-              <motion.h2
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-2xl md:text-3xl font-bold text-white bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent"
-              >
-                Game Dashboard
-              </motion.h2>
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-                {/* Player Stats */}
-                <AnimatedCard
-                  className="bg-black/40 border-white/10 hover:border-green-500/30 transition-all duration-300"
-                  delay={0}
-                >
-                  <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2 text-sm md:text-base">
-                      <motion.div
-                        animate={{ rotate: [0, 10, -10, 0] }}
-                        transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
-                      >
-                        <Trophy className="w-4 md:w-5 h-4 md:h-5 text-yellow-400" />
-                      </motion.div>
-                      Player Stats
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 md:space-y-4">
-                    {playerStats && (
-                      <>
-                        <div className="flex justify-between text-white text-sm md:text-base">
-                          <span>Level</span>
-                          <span className="font-bold text-yellow-400">{playerStats.level}</span>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-white text-sm">
-                            <span>Experience</span>
-                            <span className="font-bold">
-                              {playerStats.experience} / {playerStats.level * 1000}
-                            </span>
-                          </div>
-                          <Progress
-                            value={(playerStats.experience / (playerStats.level * 1000)) * 100}
-                            className="h-2"
-                          />
-                        </div>
-                        <div className="flex justify-between text-white text-sm md:text-base">
-                          <span>Battles Won</span>
-                          <span className="font-bold text-green-400">{playerStats.battles_won}</span>
-                        </div>
-                        <div className="flex justify-between text-white text-sm md:text-base">
-                          <span>Energy</span>
-                          <span className="font-bold text-blue-400">{playerStats.energy}/100</span>
-                        </div>
-                        <div className="flex justify-between text-white text-sm md:text-base">
-                          <span>Health</span>
-                          <span className="font-bold text-red-400">{playerStats.health}/100</span>
-                        </div>
-                      </>
-                    )}
-                  </CardContent>
-                </AnimatedCard>
-
-                {/* Resources */}
-                <ResourceManager resources={resources} onHarvest={harvestResources} />
-
-                {/* Quick Actions */}
-                <AnimatedCard
-                  className="bg-black/40 border-white/10 hover:border-blue-500/30 transition-all duration-300"
-                  delay={400}
-                >
-                  <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2 text-sm md:text-base">
-                      <motion.div
-                        animate={{ scale: [1, 1.2, 1] }}
-                        transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
-                      >
-                        <Gamepad2 className="w-4 md:w-5 h-4 md:h-5 text-green-400" />
-                      </motion.div>
-                      Quick Actions
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 md:space-y-3">
-                    <Button
-                      className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 hover:scale-105 transition-all duration-300 text-sm shadow-lg shadow-red-500/25"
-                      onClick={() => {
-                        playSound("battle")
-                        startBattle()
-                      }}
-                      disabled={isBattling}
-                    >
-                      <Sword className="w-4 h-4 mr-2" />
-                      {isBattling ? "Battling..." : "Start Battle"}
-                    </Button>
-                    <Button
-                      className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 hover:scale-105 transition-all duration-300 text-sm shadow-lg shadow-green-500/25"
-                      onClick={() => {
-                        playSound("harvest")
-                        harvestResources()
-                      }}
-                    >
-                      <Gem className="w-4 h-4 mr-2" />
-                      Harvest Resources
-                    </Button>
-                    <Button className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 hover:scale-105 transition-all duration-300 text-sm shadow-lg shadow-purple-500/25">
-                      <Crown className="w-4 h-4 mr-2" />
-                      Explore Land
-                    </Button>
-                    <Button
-                      onClick={() => setActiveTab("guilds")}
-                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 hover:scale-105 transition-all duration-300 text-sm shadow-lg shadow-blue-500/25"
-                    >
-                      <Users className="w-4 h-4 mr-2" />
-                      Join Guild
-                    </Button>
-                  </CardContent>
-                </AnimatedCard>
-              </div>
-
-              {/* Active Quests */}
-              <AnimatedCard
-                className="bg-black/40 border-white/10 hover:border-purple-500/30 transition-all duration-300"
-                delay={600}
-              >
-                <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                    >
-                      <Sparkles className="w-5 h-5 text-purple-400" />
-                    </motion.div>
-                    Active Quests
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {activeQuests.map((quest, index) => (
-                    <motion.div
-                      key={quest.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="p-3 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-lg border border-blue-600/30 hover:border-blue-500/50 transition-all duration-300 backdrop-blur-sm"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div className="flex-1">
-                          <h4 className="text-white font-medium text-sm md:text-base">{quest.name}</h4>
-                          <p className="text-gray-400 text-xs md:text-sm">{quest.description}</p>
-                          <div className="flex justify-between mt-2">
-                            <span className="text-blue-400 text-xs md:text-sm">
-                              Progress: {quest.progress}/{quest.target}
-                            </span>
-                            <span className="text-yellow-400 text-xs md:text-sm">+{quest.realmReward} REALM</span>
-                          </div>
-                          <Progress value={(quest.progress / quest.target) * 100} className="h-1 mt-1" />
-                        </div>
-                        {quest.progress >= quest.target && !quest.completed && (
-                          <Button
-                            size="sm"
-                            className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-xs shadow-lg"
-                            onClick={() => {
-                              playSound("success")
-                              completeQuest(quest.id)
-                            }}
-                          >
-                            Complete
-                          </Button>
-                        )}
-                      </div>
-                    </motion.div>
-                  ))}
-                </CardContent>
-              </AnimatedCard>
-
-              {/* Battle System */}
-              <BattleSystem />
-            </div>
-          </TabsContent>
-
-          {/* PVP Tab */}
-          <TabsContent value="pvp" className="mt-6">
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-2xl md:text-3xl font-bold text-white bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent mb-6"
-            >
-              Player vs Player
-            </motion.h2>
-            <PVPSystem
-              matches={availableBattles}
-              realmBalance={playerStats?.realm_balance || 0}
-              onCreateMatch={createPVPBattle}
-              onJoinMatch={joinPVPBattle}
-              currentPlayer={account || ""}
-            />
-          </TabsContent>
-
-          {/* Swap Tab */}
-          <TabsContent value="swap" className="mt-6">
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-2xl md:text-3xl font-bold text-white bg-gradient-to-r from-orange-400 to-yellow-400 bg-clip-text text-transparent mb-6"
-            >
-              Token Swap
-            </motion.h2>
-            {playerStats && (
-              <ServerSwapSystem
-                realmBalance={playerStats.realm_balance}
-                usdtBalance={playerStats.usdt_balance}
-                canWithdraw={playerStats.can_withdraw}
-                marketData={marketData}
-                onSwapUSDTToREALM={swapUSDTToREALM}
-                onSwapREALMToUSDT={swapREALMToUSDT}
-              />
-            )}
-          </TabsContent>
-
-          {/* Staking Tab */}
-          <TabsContent value="staking" className="mt-6">
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-2xl md:text-3xl font-bold text-white bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent mb-6"
-            >
-              REALM Staking
-            </motion.h2>
-            {playerStats && (
-              <StakingSystem
-                realmBalance={playerStats.realm_balance}
-                stakedAmount={playerStats.staked_amount}
-                stakingRewards={playerStats.staking_rewards}
-                onStake={stakeREALM}
-                onUnstake={unstakeREALM}
-                onClaimRewards={claimStakingRewards}
-              />
-            )}
-          </TabsContent>
-
-          {/* Referral Tab */}
-          <TabsContent value="referral" className="mt-6">
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-2xl md:text-3xl font-bold text-white bg-gradient-to-r from-teal-400 to-green-400 bg-clip-text text-transparent mb-6"
-            >
-              Referral Program
-            </motion.h2>
-            {playerStats && (
-              <ReferralSystem
-                referralCode={playerStats.referral_code}
-                referredBy={playerStats.referred_by}
-                totalEarnings={playerStats.referral_earnings}
-                onUseReferralCode={useReferralCode}
-              />
-            )}
-          </TabsContent>
-
-          {/* Guilds Tab */}
-          <TabsContent value="guilds" className="mt-6">
-            <GuildSystem />
-          </TabsContent>
-
-          {/* Leaderboard Tab */}
-          <TabsContent value="leaderboard" className="mt-6">
-            <div className="grid gap-4 md:gap-6">
-              <motion.h2
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-2xl md:text-3xl font-bold text-white bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent"
-              >
-                Leaderboard
-              </motion.h2>
-
-              <AnimatedCard
-                className="bg-black/40 border-white/10 hover:border-yellow-500/30 transition-all duration-300"
-                delay={0}
-              >
-                <CardContent className="p-4 md:p-6">
-                  <div className="space-y-3 md:space-y-4">
-                    {[
-                      { rank: 1, name: "DragonSlayer", score: 15420, avatar: "🐉", earnings: "2,450 REALM" },
-                      { rank: 2, name: "CryptoKnight", score: 14890, avatar: "⚔️", earnings: "2,180 REALM" },
-                      { rank: 3, name: "MysticMage", score: 13750, avatar: "🔮", earnings: "1,950 REALM" },
-                      { rank: 4, name: "SunflowerFarm", score: 12340, avatar: "🌻", earnings: "1,720 REALM" },
-                      { rank: 5, name: "IceQueen", score: 11890, avatar: "❄️", earnings: "1,580 REALM" },
-                    ].map((player, index) => (
-                      <motion.div
-                        key={player.rank}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="flex items-center justify-between p-3 md:p-4 bg-gradient-to-r from-white/5 to-white/10 rounded-lg hover:from-white/10 hover:to-white/15 transition-all duration-300 backdrop-blur-sm"
-                      >
-                        <div className="flex items-center gap-3 md:gap-4">
-                          <div
-                            className={`w-6 md:w-8 h-6 md:h-8 rounded-full flex items-center justify-center text-white font-bold text-sm md:text-base shadow-lg ${
-                              player.rank === 1
-                                ? "bg-gradient-to-r from-yellow-500 to-yellow-600"
-                                : player.rank === 2
-                                  ? "bg-gradient-to-r from-gray-400 to-gray-500"
-                                  : player.rank === 3
-                                    ? "bg-gradient-to-r from-amber-600 to-amber-700"
-                                    : "bg-gradient-to-r from-blue-600 to-blue-700"
-                            }`}
-                          >
-                            {player.rank}
-                          </div>
-                          <div className="text-lg md:text-2xl">{player.avatar}</div>
-                          <div>
-                            <span className="text-white font-medium text-sm md:text-base">{player.name}</span>
-                            <div className="text-gray-400 text-xs">{player.earnings}</div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center gap-2">
-                            <TrendingUp className="w-3 md:w-4 h-3 md:h-4 text-green-400" />
-                            <span className="text-white font-bold text-sm md:text-base">
-                              {player.score.toLocaleString()}
-                            </span>
-                          </div>
-                          <div className="text-gray-400 text-xs">XP</div>
-                        </div>
-                      </motion.div>
+                    {modelOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label} - {option.description}
+                      </option>
                     ))}
-                  </div>
-                </CardContent>
-              </AnimatedCard>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-1 block">Framework:</label>
+                  <select
+                    value={selectedLanguage}
+                    onChange={(e) => setSelectedLanguage(e.target.value)}
+                    className="w-full bg-gray-800 border-gray-600 text-white text-sm rounded-lg px-3 py-2"
+                  >
+                    {languageOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label} - {option.description}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <Button
+                onClick={handleGenerate}
+                disabled={!prompt.trim() || isGenerating}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 h-12"
+              >
+                <Wand2 className="w-4 h-4 mr-2" />
+                Generate & Install
+              </Button>
             </div>
-          </TabsContent>
 
-          {/* Admin Tab */}
-          {isAdmin && (
-            <TabsContent value="admin" className="mt-6">
-              <AdminPanel />
-            </TabsContent>
+            {/* Desktop Model & Language Selection */}
+            <div className="hidden sm:flex justify-center gap-6 mt-6">
+              <div className="flex flex-col items-center">
+                <label className="text-sm text-gray-400 mb-2">AI Model</label>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="bg-gray-800 border-gray-600 text-white text-sm rounded-lg px-4 py-2 min-w-[180px]"
+                >
+                  {modelOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col items-center">
+                <label className="text-sm text-gray-400 mb-2">Framework</label>
+                <select
+                  value={selectedLanguage}
+                  onChange={(e) => setSelectedLanguage(e.target.value)}
+                  className="bg-gray-800 border-gray-600 text-white text-sm rounded-lg px-4 py-2 min-w-[180px]"
+                >
+                  {languageOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Model Features Display */}
+          {selectedModelData && (
+            <div className="max-w-2xl mx-auto mb-8">
+              <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-800">
+                <h3 className="font-medium mb-2">{selectedModelData.label} Features:</h3>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {selectedModelData.features.map((feature, index) => (
+                    <span key={index} className="text-xs bg-gray-800 text-gray-300 px-2 py-1 rounded">
+                      {feature}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
           )}
-        </Tabs>
+
+          {/* Error Display */}
+          {error && (
+            <div className="max-w-2xl mx-auto mb-8">
+              <div className="bg-red-900/20 border border-red-800 rounded-lg p-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="text-left flex-1">
+                  <p className="text-red-400 font-medium text-sm sm:text-base">Generation Error</p>
+                  <p className="text-red-300 text-xs sm:text-sm mt-1">{error}</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setError(null)}
+                  className="text-red-400 hover:text-red-300 p-1"
+                >
+                  ×
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Upload Options - Mobile Optimized */}
+          <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 mb-12 sm:mb-16">
+            <Button
+              variant="outline"
+              className="border-gray-700 bg-gray-900/50 hover:bg-gray-800 text-gray-300 hover:text-white h-10 sm:h-auto"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Upload Design</span>
+              <span className="sm:hidden">Upload</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="border-gray-700 bg-gray-900/50 hover:bg-gray-800 text-gray-300 hover:text-white h-10 sm:h-auto"
+            >
+              <FileImage className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">From Screenshot</span>
+              <span className="sm:hidden">Screenshot</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* NPX Installation Guide */}
+        <div className="max-w-4xl mx-auto mb-12 sm:mb-20">
+          <Card className="bg-gradient-to-br from-gray-900 to-gray-800 border-gray-700">
+            <CardContent className="p-6 sm:p-8">
+              <div className="text-center mb-6">
+                <Terminal className="w-12 h-12 mx-auto mb-4 text-green-400" />
+                <h2 className="text-2xl font-bold mb-2">NPX Installation</h2>
+                <p className="text-gray-400">Install your generated website locally with a single command</p>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-3 text-white font-bold">
+                    1
+                  </div>
+                  <h3 className="font-semibold mb-2">Generate</h3>
+                  <p className="text-sm text-gray-400">Describe your website and let AI create it</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-3 text-white font-bold">
+                    2
+                  </div>
+                  <h3 className="font-semibold mb-2">Copy Command</h3>
+                  <p className="text-sm text-gray-400">Get your unique NPX installation command</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-3 text-white font-bold">
+                    3
+                  </div>
+                  <h3 className="font-semibold mb-2">Install & Run</h3>
+                  <p className="text-sm text-gray-400">Run the command in your terminal and start coding</p>
+                </div>
+              </div>
+
+              <div className="mt-8 p-4 bg-gray-950 rounded-lg">
+                <p className="text-sm text-gray-400 mb-2">Example installation:</p>
+                <code className="text-green-400 text-sm">npx @genui/my-portfolio@latest</code>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Features Grid - Responsive */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-12 sm:mb-20">
+          <Card className="bg-gradient-to-br from-blue-900/20 to-cyan-900/20 border-blue-800/30 hover:border-blue-600/50 transition-all duration-300">
+            <CardContent className="p-4 sm:p-6 lg:p-8 text-center">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                <Terminal className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-4">Cross-Platform NPX</h3>
+              <p className="text-gray-400 text-sm sm:text-base leading-relaxed">
+                Works on Windows, macOS, Linux, VS Code, Termux, and any environment with Node.js.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-purple-900/20 to-pink-900/20 border-purple-800/30 hover:border-purple-600/50 transition-all duration-300">
+            <CardContent className="p-4 sm:p-6 lg:p-8 text-center">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                <Code2 className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-4">Full Source Access</h3>
+              <p className="text-gray-400 text-sm sm:text-base leading-relaxed">
+                Complete source code with proper file structure, ready for customization and deployment.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-emerald-900/20 to-teal-900/20 border-emerald-800/30 hover:border-emerald-600/50 transition-all duration-300 sm:col-span-2 lg:col-span-1">
+            <CardContent className="p-4 sm:p-6 lg:p-8 text-center">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-4">No Authentication</h3>
+              <p className="text-gray-400 text-sm sm:text-base leading-relaxed">
+                No sign-up required. Generate unlimited websites instantly without any barriers.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Environment Setup Guide */}
+        <div className="max-w-4xl mx-auto mb-12 sm:mb-20">
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-6 sm:p-8">
+              <h2 className="text-2xl font-bold mb-6 text-center">Environment Setup</h2>
+
+              <div className="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 text-blue-400">Development Environment</h3>
+                  <div className="space-y-3">
+                    <div className="p-3 bg-gray-800 rounded-lg">
+                      <p className="text-sm font-medium text-gray-300 mb-1">VS Code</p>
+                      <p className="text-xs text-gray-400">Open terminal and run NPX command</p>
+                    </div>
+                    <div className="p-3 bg-gray-800 rounded-lg">
+                      <p className="text-sm font-medium text-gray-300 mb-1">Termux (Android)</p>
+                      <p className="text-xs text-gray-400">pkg install nodejs && npx command</p>
+                    </div>
+                    <div className="p-3 bg-gray-800 rounded-lg">
+                      <p className="text-sm font-medium text-gray-300 mb-1">Windows/macOS/Linux</p>
+                      <p className="text-xs text-gray-400">Any terminal with Node.js 16+</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 text-green-400">Required Environment</h3>
+                  <div className="space-y-3">
+                    <div className="p-3 bg-gray-800 rounded-lg">
+                      <p className="text-sm font-medium text-gray-300 mb-1">Node.js 16+</p>
+                      <p className="text-xs text-gray-400">Required for NPX and package installation</p>
+                    </div>
+                    <div className="p-3 bg-gray-800 rounded-lg">
+                      <p className="text-sm font-medium text-gray-300 mb-1">NPM/Yarn/PNPM</p>
+                      <p className="text-xs text-gray-400">Package manager for dependencies</p>
+                    </div>
+                    <div className="p-3 bg-gray-800 rounded-lg">
+                      <p className="text-sm font-medium text-gray-300 mb-1">Internet Connection</p>
+                      <p className="text-xs text-gray-400">For downloading packages and dependencies</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* CTA Section - Mobile Optimized */}
+        <div className="text-center mb-12 sm:mb-20">
+          <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-12 border border-purple-800/30">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">Start Building Now</h2>
+            <p className="text-gray-300 mb-6 sm:mb-8 text-base sm:text-lg">
+              No registration, no limits, no downloads. Just generate and install with NPX.
+            </p>
+            <Button
+              size="lg"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto"
+              onClick={() => document.querySelector("input")?.focus()}
+            >
+              Generate Website
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
+            </Button>
+          </div>
+        </div>
+
+        <CommunityShowcase />
       </main>
     </div>
   )

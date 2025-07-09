@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "name": "genui-0xhub",
+  "alias": ["0xhub.pro", "www.0xhub.pro"],
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/install/(.*)",
+      "dest": "/api/install/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ],
+  "env": {
+    "JWT_SECRET": "@jwt-secret",
+    "OXAPAY_API_KEY": "@oxapay-api-key",
+    "GOOGLE_AI_API_KEY": "@google-ai-api-key"
+  },
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  }
+}

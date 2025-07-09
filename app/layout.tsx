@@ -1,16 +1,13 @@
 import type React from "react"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
 import "./globals.css"
-import { Web3Provider } from "@/components/web3-provider"
-import { SoundProvider } from "@/components/sound-manager"
-import { Toaster } from "@/components/ui/toaster"
+import { Inter } from "next/font/google"
 
 const inter = Inter({ subsets: ["latin"] })
 
-export const metadata: Metadata = {
-  title: "CryptoRealm - NFT Gaming Platform",
-  description: "Play, collect, and trade NFTs in the ultimate blockchain gaming experience",
+export const metadata = {
+  title: "GenUI - Free AI Website Generator",
+  description:
+    "Generate professional websites instantly with AI. NPX installation, full source code access, completely free.",
     generator: 'v0.dev'
 }
 
@@ -21,14 +18,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <SoundProvider>
-          <Web3Provider>
-            {children}
-            <Toaster />
-          </Web3Provider>
-        </SoundProvider>
-      </body>
+      <body className={inter.className}>{children}</body>
     </html>
   )
 }
