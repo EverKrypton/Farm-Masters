@@ -1,7 +1,5 @@
 {
   "version": 2,
-  "name": "genui-0xhub",
-  "alias": ["0xhub.pro", "www.0xhub.pro"],
   "builds": [
     {
       "src": "package.json",
@@ -10,8 +8,8 @@
   ],
   "routes": [
     {
-      "src": "/api/install/(.*)",
-      "dest": "/api/install/$1"
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
     },
     {
       "src": "/(.*)",
@@ -19,13 +17,18 @@
     }
   ],
   "env": {
-    "JWT_SECRET": "@jwt-secret",
-    "OXAPAY_API_KEY": "@oxapay-api-key",
-    "GOOGLE_AI_API_KEY": "@google-ai-api-key"
+    "NEXT_PUBLIC_BASE_URL": "@next_public_base_url",
+    "NEXT_PUBLIC_API_URL": "@next_public_api_url"
   },
   "functions": {
-    "app/api/**/*.ts": {
-      "maxDuration": 30
+    "app/api/generate/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/deploy/route.ts": {
+      "maxDuration": 120
+    },
+    "app/api/github/push/route.ts": {
+      "maxDuration": 60
     }
   }
 }

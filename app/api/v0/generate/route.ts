@@ -1,95 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { v4 as uuidv4 } from "uuid"
 
-// Mock v0.dev API integration
-async function generateWebsiteWithV0(prompt: string) {
-  // In a real implementation, this would call the v0.dev API
-  // For now, we'll return a mock response
-
-  const mockResponse = {
-    id: `gen_${Date.now()}`,
-    prompt,
-    code: `
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-
-export default function GeneratedWebsite() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Welcome to Your Website</h1>
-          <p className="text-xl text-gray-600 mb-8">
-            Generated from: "${prompt}"
-          </p>
-          <Button size="lg">Get Started</Button>
-        </div>
-        
-        <div className="grid md:grid-cols-3 gap-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Feature One</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Amazing feature description here.</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Feature Two</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Another great feature description.</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Feature Three</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Third amazing feature description.</p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
-  )
-}`,
-    files: [
-      {
-        path: "app/page.tsx",
-        content: "// Generated website code here",
-      },
-      {
-        path: "package.json",
-        content: JSON.stringify(
-          {
-            name: "generated-website",
-            version: "1.0.0",
-            dependencies: {
-              next: "^14.0.0",
-              react: "^18.0.0",
-              "react-dom": "^18.0.0",
-            },
-          },
-          null,
-          2,
-        ),
-      },
-    ],
-    preview_url: `https://preview-${Date.now()}.vercel.app`,
-    created_at: new Date().toISOString(),
-  }
-
-  return mockResponse
-}
-
 // In-memory storage for demo (use a real database in production)
 export const projects = new Map<string, any>()
 
-interface GenerateRequest {
+interface V0GenerateRequest {
   prompt: string
   userId?: string
 }
@@ -148,32 +63,6 @@ function generateFileStructure(codeBlocks: Array<{ language: string; code: strin
     })
   }
 
-  // Add Next.js config
-  files.push({
-    path: "next.config.js",
-    content: `/** @type {import('next').NextConfig} */
-const nextConfig = {}
-
-module.exports = nextConfig`,
-  })
-
-  // Add Tailwind config
-  files.push({
-    path: "tailwind.config.js",
-    content: `/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: [
-    './pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './app/**/*.{js,ts,jsx,tsx,mdx}',
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-}`,
-  })
-
   // Process code blocks
   codeBlocks.forEach((block) => {
     if (block.filename) {
@@ -204,6 +93,7 @@ async function callV0Api(prompt: string): Promise<any> {
   }
 
   try {
+    // Use the correct v0.dev API endpoint
     const response = await fetch("https://api.v0.dev/chat", {
       method: "POST",
       headers: {
@@ -219,17 +109,21 @@ async function callV0Api(prompt: string): Promise<any> {
         ],
         model: "v0-1.5-md",
       }),
-      signal: AbortSignal.timeout(60000),
+      signal: AbortSignal.timeout(60000), // 60 seconds timeout
     })
 
     if (!response.ok) {
       const errorText = await response.text()
       console.error("V0 API Error:", response.status, errorText)
-      throw new Error(`V0 API request failed: ${response.status}`)
+      throw new Error(`V0 API request failed: ${response.status} - ${errorText}`)
     }
 
     const data = await response.json()
+
+    // Extract the generated content
     const generatedContent = data.choices?.[0]?.message?.content || data.content || JSON.stringify(data)
+
+    // Parse the generated content to extract code blocks
     const codeBlocks = extractCodeBlocks(generatedContent)
 
     return {
@@ -244,12 +138,24 @@ async function callV0Api(prompt: string): Promise<any> {
     }
   } catch (error) {
     console.error("V0 API call failed:", error)
+
+    if (error instanceof TypeError && error.message.includes("fetch")) {
+      throw new Error("Network error when connecting to v0.dev API. Please check your internet connection.")
+    }
+
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Request to v0.dev API timed out. Please try again later.")
+    }
+
     throw error
   }
 }
 
+// Fallback function to generate mock data if the API call fails
 function generateMockResponse(prompt: string): any {
-  const mockCode = `
+  console.log("Using mock response for prompt:", prompt)
+
+  const mockNextJsCode = `
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -304,18 +210,18 @@ export default function GeneratedWebsite() {
   return {
     id: uuidv4(),
     prompt,
-    content: mockCode,
+    content: mockNextJsCode,
     code_blocks: [
       {
         language: "tsx",
-        code: mockCode,
+        code: mockNextJsCode,
         filename: "app/page.tsx",
       },
     ],
     files: [
       {
         path: "app/page.tsx",
-        content: mockCode,
+        content: mockNextJsCode,
       },
       {
         path: "package.json",
@@ -356,7 +262,7 @@ export default function GeneratedWebsite() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, userId }: GenerateRequest = await request.json()
+    const { prompt, userId }: V0GenerateRequest = await request.json()
 
     if (!prompt || prompt.trim().length === 0) {
       return NextResponse.json({ error: "Prompt is required and cannot be empty" }, { status: 400 })
@@ -369,13 +275,15 @@ export async function POST(request: NextRequest) {
     let generatedWebsite
 
     try {
+      // Try to generate website using v0.dev API
       generatedWebsite = await callV0Api(prompt)
     } catch (apiError) {
       console.error("V0 API error, falling back to mock data:", apiError)
+      // If the API call fails, use the fallback mock data
       generatedWebsite = generateMockResponse(prompt)
     }
 
-    // Store the project
+    // Store the project in memory for demo purposes
     projects.set(generatedWebsite.id, generatedWebsite)
 
     return NextResponse.json({
@@ -384,6 +292,11 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("Website generation error:", error)
+
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
     return NextResponse.json({ error: "Failed to generate website. Please try again." }, { status: 500 })
   }
 }
